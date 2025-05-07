@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Union
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -7,7 +7,7 @@ from app.models.enums import UserRole
 from app.core.exceptions import UnauthorizedAccess
 
 settings = get_settings()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> tuple[str, UserRole]:
     credentials_exception = HTTPException(
@@ -25,10 +25,22 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> tuple[str, Us
     except JWTError:
         raise credentials_exception
 
-def require_role(required_role: UserRole):
+def require_role(required_roles: Union[UserRole, List[UserRole]]):
+    """
+    Dependency function to check if the user has one of the required roles.
+    
+    Args:
+        required_roles: A single role or list of roles that are allowed to access the endpoint
+    """
+    if isinstance(required_roles, UserRole):
+        required_roles = [required_roles]
+        
     async def role_checker(user: tuple[str, UserRole] = Depends(get_current_user)):
         user_id, role = user
-        if role != required_role:
-            raise UnauthorizedAccess()
+        if role not in required_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not enough permissions"
+            )
         return user_id
     return role_checker 

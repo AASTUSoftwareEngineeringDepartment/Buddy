@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from app.db.mongo import MongoDB
 from app.models.user import Parent, Child
 from app.models.enums import UserRole
@@ -118,4 +118,20 @@ class UserService:
 
     async def get_child(self, child_id: str) -> Optional[Child]:
         child = await self.children_collection.find_one({"child_id": child_id})
-        return Child(**child) if child else None 
+        return Child(**child) if child else None
+
+    async def get_parent_children(self, parent_id: str) -> List[Child]:
+        """Get all children associated with a parent."""
+        children = await self.children_collection.find({"parent_id": parent_id}).to_list(length=None)
+        return [Child(**child) for child in children]
+
+    async def get_child_parent(self, child_id: str) -> Optional[Parent]:
+        """Get the parent information for a child."""
+        # First get the child to get the parent_id
+        child = await self.children_collection.find_one({"child_id": child_id})
+        if not child:
+            return None
+            
+        # Then get the parent using the parent_id
+        parent = await self.parents_collection.find_one({"parent_id": child["parent_id"]})
+        return Parent(**parent) if parent else None 

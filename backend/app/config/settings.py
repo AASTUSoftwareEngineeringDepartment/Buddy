@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # JWT settings
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 36000
     
     # Security settings
     PASSWORD_HASH_ALGORITHM: str = "bcrypt"
@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     MAIL_PORT: int
     MAIL_SERVER: str
     MAIL_FROM_NAME: str
+    
+    # Gemini settings
+    GEMINI_API_KEY: str
+    
+    # Image Generator settings
+    IMAGE_GENERATOR_URI: str = "https://a84e-34-125-77-122.ngrok-free.app/images/generate"
     
     class Config:
         env_file = ".env"

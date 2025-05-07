@@ -11,3 +11,7 @@ python-dotenv==1.0.1
 email-validator==2.1.0.post1
 fastapi-mail==1.4.1
 bcrypt==4.1.2
+google-generativeai==0.3.2
+PyPDF2==3.0.1
+aiohttp==3.11.18
+jsonschema==4.21.1
