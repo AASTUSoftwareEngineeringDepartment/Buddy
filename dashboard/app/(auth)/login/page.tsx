@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, useEffect} from "react";
+import {useState, useEffect, Suspense} from "react";
 import Link from "next/link";
 import {useRouter, useSearchParams} from "next/navigation";
 import {Button} from "@/components/ui/button";
@@ -10,7 +10,7 @@ import {Card, CardContent, CardFooter} from "@/components/ui/card";
 import {Heart} from "lucide-react";
 import {useAuth} from "@/lib/context/auth-context";
 
-export default function LoginPage() {
+function LoginForm() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const {login, user, isLoading: authLoading} = useAuth();
@@ -61,6 +61,75 @@ export default function LoginPage() {
 	}
 
 	return (
+		<Card className='border-none shadow-none'>
+			<CardContent className='p-0'>
+				<form onSubmit={onSubmit}>
+					<div className='grid gap-4'>
+						<div className='grid gap-2'>
+							<Label htmlFor='username'>Username</Label>
+							<Input
+								id='username'
+								name='username'
+								placeholder='Enter your username'
+								type='text'
+								autoCapitalize='none'
+								autoComplete='username'
+								autoCorrect='off'
+								disabled={isLoading}
+								required
+								className='h-11'
+								value={formData.username}
+								onChange={handleChange}
+							/>
+						</div>
+						<div className='grid gap-2'>
+							<Label htmlFor='password'>Password</Label>
+							<Input
+								id='password'
+								name='password'
+								type='password'
+								autoComplete='current-password'
+								disabled={isLoading}
+								required
+								className='h-11'
+								value={formData.password}
+								onChange={handleChange}
+							/>
+						</div>
+						<Button
+							disabled={isLoading}
+							className='h-11 mt-2'
+						>
+							{isLoading ? "Signing in..." : "Sign In"}
+						</Button>
+					</div>
+				</form>
+			</CardContent>
+			<CardFooter className='flex flex-col space-y-4 p-0 mt-6'>
+				<div className='text-sm text-muted-foreground'>
+					<Link
+						href='/forgot-password'
+						className='hover:text-primary underline underline-offset-4'
+					>
+						Forgot your password?
+					</Link>
+				</div>
+				<div className='text-sm text-muted-foreground'>
+					Don't have an account?{" "}
+					<Link
+						href='/signup'
+						className='hover:text-primary underline underline-offset-4'
+					>
+						Sign up
+					</Link>
+				</div>
+			</CardFooter>
+		</Card>
+	);
+}
+
+export default function LoginPage() {
+	return (
 		<div className='w-full max-w-[400px]'>
 			<div className='flex flex-col space-y-6'>
 				<div className='flex flex-col space-y-2'>
@@ -72,70 +141,15 @@ export default function LoginPage() {
 					<p className='text-sm text-muted-foreground'>Enter your credentials to sign in to your account</p>
 				</div>
 
-				<Card className='border-none shadow-none'>
-					<CardContent className='p-0'>
-						<form onSubmit={onSubmit}>
-							<div className='grid gap-4'>
-								<div className='grid gap-2'>
-									<Label htmlFor='username'>Username</Label>
-									<Input
-										id='username'
-										name='username'
-										placeholder='Enter your username'
-										type='text'
-										autoCapitalize='none'
-										autoComplete='username'
-										autoCorrect='off'
-										disabled={isLoading}
-										required
-										className='h-11'
-										value={formData.username}
-										onChange={handleChange}
-									/>
-								</div>
-								<div className='grid gap-2'>
-									<Label htmlFor='password'>Password</Label>
-									<Input
-										id='password'
-										name='password'
-										type='password'
-										autoComplete='current-password'
-										disabled={isLoading}
-										required
-										className='h-11'
-										value={formData.password}
-										onChange={handleChange}
-									/>
-								</div>
-								<Button
-									disabled={isLoading}
-									className='h-11 mt-2'
-								>
-									{isLoading ? "Signing in..." : "Sign In"}
-								</Button>
-							</div>
-						</form>
-					</CardContent>
-					<CardFooter className='flex flex-col space-y-4 p-0 mt-6'>
-						<div className='text-sm text-muted-foreground'>
-							<Link
-								href='/forgot-password'
-								className='hover:text-primary underline underline-offset-4'
-							>
-								Forgot your password?
-							</Link>
+				<Suspense
+					fallback={
+						<div className='flex items-center justify-center min-h-[400px]'>
+							<div className='animate-spin rounded-full h-8 w-8 border-b-2 border-[#344e41]'></div>
 						</div>
-						<div className='text-sm text-muted-foreground'>
-							Don't have an account?{" "}
-							<Link
-								href='/signup'
-								className='hover:text-primary underline underline-offset-4'
-							>
-								Sign up
-							</Link>
-						</div>
-					</CardFooter>
-				</Card>
+					}
+				>
+					<LoginForm />
+				</Suspense>
 			</div>
 		</div>
 	);
