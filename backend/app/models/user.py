@@ -36,4 +36,15 @@ class Child(BaseModel):
 
     @field_serializer('created_at')
     def serialize_created_at(self, created_at: datetime, _info):
-        return created_at.isoformat() 
+        return created_at.isoformat()
+
+class UserProfileResponse(BaseModel):
+    user_id: str
+    username: str
+    first_name: str
+    last_name: str
+    role: UserRole
+    email: Optional[str] = None  # Only for parents
+    birth_date: Optional[datetime] = None  # Only for children
+    nickname: Optional[str] = None  # Only for children
+    created_at: datetime 

@@ -8,7 +8,10 @@ from app.schemas.auth import (
     TokenResponse,
     MessageResponse
 )
+from app.models.user import UserProfileResponse
 from app.core.security import create_token_for_user
+from app.api.v1.dependencies.auth import get_current_user
+from app.models.enums import UserRole
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -86,4 +89,22 @@ async def login(request: LoginRequest):
         access_token=token,
         role=role,
         user_id=user_id
-    ) 
+    )
+
+@router.get("/me", response_model=UserProfileResponse)
+async def get_my_profile(
+    current_user: tuple[str, UserRole] = Depends(get_current_user)
+):
+    """
+    Get the profile of the currently logged-in user.
+    Works for both parent and child users.
+    """
+    try:
+        user_id, role = current_user
+        user_service = UserService()
+        return await user_service.get_user_profile(user_id, role)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve user profile: {str(e)}"
+        ) 

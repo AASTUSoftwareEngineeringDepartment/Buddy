@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 from app.db.mongo import MongoDB
-from app.models.user import Parent, Child
+from app.models.user import Parent, Child, UserProfileResponse
 from app.models.enums import UserRole
 from app.core.security import get_password_hash, verify_password, create_token_for_user
 from app.core.exceptions import UserAlreadyExists, InvalidCredentials, UserNotFound
@@ -134,4 +134,34 @@ class UserService:
             
         # Then get the parent using the parent_id
         parent = await self.parents_collection.find_one({"parent_id": child["parent_id"]})
-        return Parent(**parent) if parent else None 
+        return Parent(**parent) if parent else None
+
+    async def get_user_profile(self, user_id: str, role: UserRole) -> UserProfileResponse:
+        """Get the user profile based on their role."""
+        if role == UserRole.PARENT:
+            parent = await self.get_parent(user_id)
+            if not parent:
+                raise UserNotFound("Parent not found")
+            return UserProfileResponse(
+                user_id=parent.parent_id,
+                username=parent.username,
+                first_name=parent.first_name,
+                last_name=parent.last_name,
+                role=parent.role,
+                email=parent.email,
+                created_at=parent.created_at
+            )
+        else:  # UserRole.CHILD
+            child = await self.get_child(user_id)
+            if not child:
+                raise UserNotFound("Child not found")
+            return UserProfileResponse(
+                user_id=child.child_id,
+                username=child.username,
+                first_name=child.first_name,
+                last_name=child.last_name,
+                role=child.role,
+                birth_date=child.birth_date,
+                nickname=child.nickname,
+                created_at=child.created_at
+            ) 

@@ -1,0 +1,197 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--font-sans: var(--font-geist-sans);
+	--font-mono: var(--font-geist-mono);
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-chart-5: var(--chart-5);
+	--color-chart-4: var(--chart-4);
+	--color-chart-3: var(--chart-3);
+	--color-chart-2: var(--chart-2);
+	--color-chart-1: var(--chart-1);
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+	--radius: 0.5rem;
+
+	/* Base colors */
+	--background: #ffffff;
+	--foreground: #344e41;
+
+	/* Card colors */
+	--card: #ffffff;
+	--card-foreground: #344e41;
+
+	/* Popover colors */
+	--popover: #ffffff;
+	--popover-foreground: #344e41;
+
+	/* Primary colors */
+	--primary: #344e41;
+	--primary-foreground: #ffffff;
+
+	/* Secondary colors */
+	--secondary: #f2f5f4;
+	--secondary-foreground: #344e41;
+
+	/* Muted colors */
+	--muted: #f7f9f8;
+	--muted-foreground: #5a7a6d;
+
+	/* Accent colors */
+	--accent: #f2f5f4;
+	--accent-foreground: #344e41;
+
+	/* Destructive colors */
+	--destructive: #ef4444;
+	--destructive-foreground: #ffffff;
+
+	/* Border and input colors */
+	--border: #e5ebe8;
+	--input: #e5ebe8;
+	--ring: #344e41;
+
+	/* Chart colors */
+	--chart-1: #344e41;
+	--chart-2: #5a7a6d;
+	--chart-3: #8ba89e;
+	--chart-4: #bcd6cf;
+	--chart-5: #e5ebe8;
+
+	/* Sidebar colors */
+	--sidebar: #ffffff;
+	--sidebar-foreground: #344e41;
+	--sidebar-primary: #344e41;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #f2f5f4;
+	--sidebar-accent-foreground: #344e41;
+	--sidebar-border: #e5ebe8;
+	--sidebar-ring: #344e41;
+}
+
+.dark {
+	/* Base colors */
+	--background: #1a2a24;
+	--foreground: #e5ebe8;
+
+	/* Card colors */
+	--card: #22332c;
+	--card-foreground: #e5ebe8;
+
+	/* Popover colors */
+	--popover: #22332c;
+	--popover-foreground: #e5ebe8;
+
+	/* Primary colors */
+	--primary: #344e41;
+	--primary-foreground: #ffffff;
+
+	/* Secondary colors */
+	--secondary: #2a3d35;
+	--secondary-foreground: #e5ebe8;
+
+	/* Muted colors */
+	--muted: #2f4339;
+	--muted-foreground: #bcd6cf;
+
+	/* Accent colors */
+	--accent: #2a3d35;
+	--accent-foreground: #e5ebe8;
+
+	/* Destructive colors */
+	--destructive: #7f1d1d;
+	--destructive-foreground: #e5ebe8;
+
+	/* Border and input colors */
+	--border: #3d5447;
+	--input: #3d5447;
+	--ring: #bcd6cf;
+
+	/* Chart colors */
+	--chart-1: #e5ebe8;
+	--chart-2: #bcd6cf;
+	--chart-3: #8ba89e;
+	--chart-4: #5a7a6d;
+	--chart-5: #344e41;
+
+	/* Sidebar colors */
+	--sidebar: #22332c;
+	--sidebar-foreground: #e5ebe8;
+	--sidebar-primary: #344e41;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #2a3d35;
+	--sidebar-accent-foreground: #e5ebe8;
+	--sidebar-border: #3d5447;
+	--sidebar-ring: #bcd6cf;
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+}
+
+/* Calendar Styles */
+.rdp {
+	--rdp-cell-size: 40px;
+	--rdp-accent-color: var(--primary);
+	--rdp-background-color: var(--accent);
+	--rdp-accent-color-dark: var(--primary);
+	--rdp-background-color-dark: var(--accent);
+	--rdp-outline: 2px solid var(--rdp-accent-color);
+	--rdp-outline-selected: 2px solid var(--rdp-accent-color);
+	margin: 1em;
+}
+
+.rdp-months {
+	display: flex;
+}
+
+.rdp-month {
+	background-color: var(--background);
+	border-radius: var(--radius);
+	padding: 16px;
+}
+
+.rdp-day_selected,
+.rdp-day_selected:focus-visible,
+.rdp-day_selected:hover {
+	color: var(--primary-foreground);
+	opacity: 1;
+	background-color: var(--primary);
+}
