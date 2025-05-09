@@ -179,7 +179,7 @@ The story should be:
 Keep the story between 50-100 words, perfect for a young child to understand and enjoy.
 
 EXAMPLE STORIES FOR REFERENCE:
-{chr(10).join(f'Example {i+1}: {story["title"]}\nSummary: {story["content"][:100]}...' for i, story in enumerate(relevant_stories[:2]))}"""
+{chr(10).join([f'Example {i+1}: {story["title"]}{chr(10)}Summary: {story["content"][:100]}...' for i, story in enumerate(relevant_stories[:2])])}"""
 
             try:
                 # Generate the story using the new structured output method
