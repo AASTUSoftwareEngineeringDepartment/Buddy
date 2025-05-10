@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.services.user_service import UserService
 from app.services.otp_service import OTPService
 from app.schemas.auth import (
@@ -8,6 +8,7 @@ from app.schemas.auth import (
     TokenResponse,
     MessageResponse
 )
+from app.schemas.user import ProfileUpdateRequest
 from app.models.user import UserProfileResponse
 from app.core.security import create_token_for_user
 from app.api.v1.dependencies.auth import get_current_user
@@ -107,4 +108,29 @@ async def get_my_profile(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve user profile: {str(e)}"
+        )
+
+@router.put("/me", response_model=UserProfileResponse)
+async def update_my_profile(
+    update_data: ProfileUpdateRequest,
+    current_user: tuple[str, UserRole] = Depends(get_current_user)
+):
+    """
+    Update the profile of the currently logged-in user.
+    - Parents can update their email, first name, last name, and password
+    - Children can only update their first name, last name, and password
+    """
+    try:
+        user_id, role = current_user
+        user_service = UserService()
+        return await user_service.update_profile(user_id, role, update_data.model_dump(exclude_unset=True))
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=400,
+            detail=str(ve)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update profile: {str(e)}"
         ) 

@@ -164,4 +164,61 @@ class UserService:
                 birth_date=child.birth_date,
                 nickname=child.nickname,
                 created_at=child.created_at
-            ) 
+            )
+
+    async def update_profile(self, user_id: str, role: UserRole, update_data: dict) -> UserProfileResponse:
+        """Update user profile based on their role."""
+        if role == UserRole.PARENT:
+            # Check if email is being updated and if it's already taken
+            if "email" in update_data and update_data["email"]:
+                existing_user = await self.parents_collection.find_one({"email": update_data["email"]})
+                if existing_user and existing_user["parent_id"] != user_id:
+                    raise UserAlreadyExists("Email is already taken")
+
+            # Update parent profile
+            update_fields = {}
+            if "email" in update_data and update_data["email"]:
+                update_fields["email"] = update_data["email"]
+            if "first_name" in update_data and update_data["first_name"]:
+                update_fields["first_name"] = update_data["first_name"]
+            if "last_name" in update_data and update_data["last_name"]:
+                update_fields["last_name"] = update_data["last_name"]
+            if "password" in update_data and update_data["password"]:
+                update_fields["password_hash"] = get_password_hash(update_data["password"])
+
+            if not update_fields:
+                raise ValueError("No valid fields to update")
+
+            result = await self.parents_collection.update_one(
+                {"parent_id": user_id},
+                {"$set": update_fields}
+            )
+
+            if result.modified_count == 0:
+                raise UserNotFound("Parent not found")
+
+            # Get updated parent profile
+            return await self.get_user_profile(user_id, role)
+        else:
+            # For children, only allow updating name fields
+            update_fields = {}
+            if "first_name" in update_data and update_data["first_name"]:
+                update_fields["first_name"] = update_data["first_name"]
+            if "last_name" in update_data and update_data["last_name"]:
+                update_fields["last_name"] = update_data["last_name"]
+            if "password" in update_data and update_data["password"]:
+                update_fields["password_hash"] = get_password_hash(update_data["password"])
+
+            if not update_fields:
+                raise ValueError("No valid fields to update")
+
+            result = await self.children_collection.update_one(
+                {"child_id": user_id},
+                {"$set": update_fields}
+            )
+
+            if result.modified_count == 0:
+                raise UserNotFound("Child not found")
+
+            # Get updated child profile
+            return await self.get_user_profile(user_id, role) 
