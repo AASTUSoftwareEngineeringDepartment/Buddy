@@ -221,4 +221,42 @@ class UserService:
                 raise UserNotFound("Child not found")
 
             # Get updated child profile
-            return await self.get_user_profile(user_id, role) 
+            return await self.get_user_profile(user_id, role)
+
+    async def update_child_profile(self, parent_id: str, child_id: str, update_data: dict) -> UserProfileResponse:
+        """Update child profile by parent."""
+        # First verify that the child belongs to the parent
+        child = await self.children_collection.find_one({
+            "child_id": child_id,
+            "parent_id": parent_id
+        })
+        
+        if not child:
+            raise UserNotFound("Child not found or not associated with this parent")
+
+        # Update child profile
+        update_fields = {}
+        if "first_name" in update_data and update_data["first_name"]:
+            update_fields["first_name"] = update_data["first_name"]
+        if "last_name" in update_data and update_data["last_name"]:
+            update_fields["last_name"] = update_data["last_name"]
+        if "birth_date" in update_data and update_data["birth_date"]:
+            update_fields["birth_date"] = update_data["birth_date"]
+        if "nickname" in update_data and update_data["nickname"]:
+            update_fields["nickname"] = update_data["nickname"]
+        if "password" in update_data and update_data["password"]:
+            update_fields["password_hash"] = get_password_hash(update_data["password"])
+
+        if not update_fields:
+            raise ValueError("No valid fields to update")
+
+        result = await self.children_collection.update_one(
+            {"child_id": child_id},
+            {"$set": update_fields}
+        )
+
+        if result.modified_count == 0:
+            raise UserNotFound("Failed to update child profile")
+
+        # Get updated child profile
+        return await self.get_user_profile(child_id, UserRole.CHILD) 

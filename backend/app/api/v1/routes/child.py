@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.services.user_service import UserService
 from app.schemas.auth import ChildCreateRequest, TokenResponse
+from app.schemas.user import ChildProfileUpdateRequest
 from app.api.v1.dependencies.auth import require_role, get_current_user
 from app.models.enums import UserRole
 from app.core.security import create_token_for_user
 from typing import List
-from app.models.user import Child, Parent
+from app.models.user import Child, Parent, UserProfileResponse
 
 router = APIRouter(prefix="/children", tags=["children"])
 
@@ -88,4 +89,31 @@ async def get_my_parent(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve parent information: {str(e)}"
+        )
+
+@router.put("/{child_id}/profile", response_model=UserProfileResponse)
+async def update_child_profile(
+    child_id: str,
+    update_data: ChildProfileUpdateRequest,
+    parent_id: str = Depends(require_role(UserRole.PARENT))
+):
+    """
+    Update a child's profile. Only accessible by the child's parent.
+    """
+    try:
+        user_service = UserService()
+        return await user_service.update_child_profile(
+            parent_id=parent_id,
+            child_id=child_id,
+            update_data=update_data.model_dump(exclude_unset=True)
+        )
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=400,
+            detail=str(ve)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update child profile: {str(e)}"
         ) 
