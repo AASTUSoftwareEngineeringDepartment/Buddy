@@ -19,7 +19,8 @@ class ScienceQuestion(BaseModel):
     question_id: str = Field(default_factory=lambda: str(uuid4()))
     chunk_id: str
     question: str
-    answer: str
+    options: List[str]  # List of multiple choice options
+    correct_option_index: int  # Index of the correct answer in options list
     difficulty_level: str  # "easy", "medium", "hard"
     age_range: str  # "4-6", "6-8"
     topic: str

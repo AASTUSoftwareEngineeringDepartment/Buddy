@@ -3,7 +3,7 @@ import google.generativeai as genai
 from pydantic import BaseModel, create_model
 import json
 import logging
-from typing import Dict, Any, Type
+from typing import Dict, Any, Type, List
 from app.config.settings import get_settings
 
 # Add this import for structured output
@@ -87,6 +87,17 @@ class LLMService:
                 field_type = float
             elif field_schema.get("type") == "boolean":
                 field_type = bool
+            elif field_schema.get("type") == "array":
+                # Get the type of array items
+                items_schema = field_schema.get("items", {})
+                item_type = str  # Default to string
+                if items_schema.get("type") == "integer":
+                    item_type = int
+                elif items_schema.get("type") == "number":
+                    item_type = float
+                elif items_schema.get("type") == "boolean":
+                    item_type = bool
+                field_type = List[item_type]
             
             required = field_name in schema.get("required", [])
             fields[field_name] = (field_type, ... if required else None)

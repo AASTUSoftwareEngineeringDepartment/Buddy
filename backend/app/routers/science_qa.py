@@ -34,29 +34,58 @@ def get_question_schema():
                 "type": "string",
                 "description": "The science question for children"
             },
-            "answer": {
-                "type": "string",
-                "description": "The answer to the question"
+            "options": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "description": "List of 4 multiple choice options",
+                "minItems": 4,
+                "maxItems": 4,
+                "uniqueItems": True
+            },
+            "correct_option_index": {
+                "type": "integer",
+                "description": "Index of the correct answer (0-3)",
+                "minimum": 0,
+                "maximum": 3
             }
         },
-        "required": ["question", "answer"]
+        "required": ["question", "options", "correct_option_index"],
+        "additionalProperties": False
     }
 
 def get_system_instruction(age_range: str, difficulty_level: str) -> str:
     return f"""You are a science question generator for children aged {age_range} years old.
-Your task is to create engaging and educational science questions that are {difficulty_level} difficulty level.
+Your task is to create engaging and educational multiple-choice science questions that are {difficulty_level} difficulty level.
 
 Follow these rules:
 1. Keep questions simple and clear
 2. Use age-appropriate vocabulary
 3. Include a fun analogy or comparison
 4. Make it engaging and interactive
-5. Ensure the answer is clear and educational
-6. Format the response as JSON with 'question' and 'answer' fields
+5. Create 4 multiple-choice options:
+   - One correct answer
+   - Three plausible but incorrect answers
+   - All options should be similar in length
+   - Avoid obviously wrong answers
+6. Format the response as JSON with 'question', 'options', and 'correct_option_index' fields
 7. Keep the answer concise but informative
 8. Use examples that children can relate to
 9. Avoid complex scientific jargon
-10. Make it fun and interesting"""
+10. Make it fun and interesting
+
+Example response format:
+{{
+    "question": "What do plants need to grow big and strong?",
+    "options": [
+        "Sunlight and water",
+        "Lots of toys",
+        "New clothes",
+        "A cozy bed"
+    ],
+    "correct_option_index": 0
+}}"""
 
 @router.post("/process-pdf", response_model=PDFProcessingResponse)
 async def process_pdf(request: PDFProcessingRequest) -> PDFProcessingResponse:
@@ -108,7 +137,7 @@ async def generate_question(request: QuestionGenerationRequest) -> QuestionGener
         # Create the prompt
         prompt = f"""{system_instruction}
 
-Based on this science text, generate a question and answer:
+Based on this science text, generate a multiple-choice question with 4 options:
 
 Text content:
 {chunk["content"]}
@@ -119,6 +148,8 @@ The question should be:
 - Related to the topic: {request.topic or 'general science'}
 - Fun and engaging
 - Educational and clear
+- Have 4 multiple-choice options
+- One correct answer and three plausible but incorrect answers
 """
         
         # Generate question using LLM service
@@ -131,7 +162,8 @@ The question should be:
         question = ScienceQuestion(
             chunk_id=chunk["chunk_id"],
             question=qa_data["question"],
-            answer=qa_data["answer"],
+            options=qa_data["options"],
+            correct_option_index=qa_data["correct_option_index"],
             difficulty_level=request.difficulty_level,
             age_range=request.age_range,
             topic=request.topic or "general"
