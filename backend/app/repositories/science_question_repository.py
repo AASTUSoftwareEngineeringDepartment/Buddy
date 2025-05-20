@@ -156,4 +156,30 @@ class ScienceQuestionRepository:
         result = await self.collection.aggregate(pipeline).to_list(length=1)
         if result:
             return ScienceQuestion(**result[0])
-        return None 
+        return None
+
+    async def get_current_streak(self, child_id: str) -> int:
+        """Get the current streak of correct answers for a child."""
+        # Get the most recent questions for the child
+        cursor = self.collection.find(
+            {"child_id": child_id}
+        ).sort("answered_at", -1)
+        
+        questions = await cursor.to_list(length=None)
+        streak = 0
+        
+        for question in questions:
+            if question.get("scored", False):
+                streak += 1
+            else:
+                break
+                
+        return streak
+
+    async def get_total_correct(self, child_id: str) -> int:
+        """Get the total number of correct answers for a child."""
+        count = await self.collection.count_documents({
+            "child_id": child_id,
+            "scored": True
+        })
+        return count 

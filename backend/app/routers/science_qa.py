@@ -6,7 +6,12 @@ from app.models.science_qa import (
     PDFProcessingRequest,
     PDFProcessingResponse,
     AnswerQuestionRequest,
-    AnswerQuestionResponse
+    AnswerQuestionResponse,
+    AchievementTableResponse,
+    AchievementType,
+    StreakResponse,
+    Achievement,
+    ACHIEVEMENTS
 )
 from app.services.vector_store import VectorStore
 from app.services.pdf_processor import PDFProcessor
@@ -20,6 +25,8 @@ import json
 import logging
 from dotenv import load_dotenv
 import random
+from app.repositories.achievement_repository import AchievementRepository
+from fastapi import status
 
 load_dotenv()
 
@@ -32,6 +39,15 @@ vector_store = VectorStore()
 pdf_processor = PDFProcessor()
 llm_service = LLMService()
 question_repository = ScienceQuestionRepository()
+achievement_repo = AchievementRepository()
+
+def get_question_repository() -> ScienceQuestionRepository:
+    """Dependency to get an instance of ScienceQuestionRepository."""
+    return ScienceQuestionRepository()
+
+def get_achievement_repository() -> AchievementRepository:
+    """Dependency to get an instance of AchievementRepository."""
+    return AchievementRepository()
 
 def get_question_schema():
     return {
@@ -285,6 +301,7 @@ async def answer_question(
     """
     try:
         repository = ScienceQuestionRepository()
+        achievement_repo = AchievementRepository()
         
         # Verify the question belongs to this child
         question = await repository.get_question_by_id(request.question_id)
@@ -300,13 +317,146 @@ async def answer_question(
             request.selected_index
         )
         
+        # If answer is correct, check for achievements
+        new_achievements = []
+        if is_correct:
+            # Get current streak and total correct answers
+            current_streak = await repository.get_current_streak(child_id)
+            total_correct = await repository.get_total_correct(child_id)
+            
+            # Check and award achievements
+            new_achievements = await achievement_repo.check_and_award_achievements(
+                child_id=child_id,
+                current_streak=current_streak,
+                total_correct=total_correct
+            )
+        
         return AnswerQuestionResponse(
             is_correct=is_correct,
-            question=updated_question
+            question=updated_question,
+            new_achievements=new_achievements
         )
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error answering question: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to process answer") 
+        raise HTTPException(status_code=500, detail="Failed to process answer")
+
+@router.get("/achievements", response_model=AchievementTableResponse)
+async def get_achievements(
+    child_id: str = Depends(require_role(UserRole.CHILD)),
+    achievement_repo: AchievementRepository = Depends(get_achievement_repository)
+):
+    """
+    Get all achievements for a child in a table format, organized by category.
+    """
+    try:
+        # Get all achievements for the child
+        achievements = await achievement_repo.get_child_achievements(child_id)
+        
+        # Calculate total possible achievements
+        total_possible = len(AchievementType)
+        
+        # Calculate completion percentage
+        completion_percentage = (len(achievements) / total_possible) * 100
+        
+        # Organize achievements by category
+        categories = {
+            "streak": [],
+            "total": [],
+            "topic": [],
+            "speed": [],
+            "difficulty": []
+        }
+        
+        for achievement in achievements:
+            achievement_type = achievement.type
+            if "streak" in achievement_type:
+                categories["streak"].append(achievement)
+            elif "total" in achievement_type:
+                categories["total"].append(achievement)
+            elif any(topic in achievement_type for topic in ["biology", "chemistry", "physics", "astronomy"]):
+                categories["topic"].append(achievement)
+            elif any(speed in achievement_type for speed in ["quick", "speed", "lightning"]):
+                categories["speed"].append(achievement)
+            elif any(difficulty in achievement_type for difficulty in ["easy", "medium", "hard"]):
+                categories["difficulty"].append(achievement)
+        
+        return AchievementTableResponse(
+            achievements=achievements,
+            total_achievements=len(achievements),
+            total_possible=total_possible,
+            completion_percentage=completion_percentage,
+            categories=categories
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting achievements for child {child_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve achievements"
+        )
+
+@router.get("/streak", response_model=StreakResponse)
+async def get_streak_info(
+    child_id: str = Depends(require_role(UserRole.CHILD)),
+    question_repo: ScienceQuestionRepository = Depends(get_question_repository),
+    achievement_repo: AchievementRepository = Depends(get_achievement_repository)
+):
+    """
+    Get current streak information and streak-related achievements.
+    """
+    try:
+        # Get current streak and total correct
+        current_streak = await question_repo.get_current_streak(child_id)
+        total_correct = await question_repo.get_total_correct(child_id)
+        
+        # Get all streak-based achievements
+        streak_achievements = []
+        next_achievement = None
+        streak_progress = 0.0
+        
+        # Define streak milestones in order
+        streak_milestones = [
+            (AchievementType.PERFECT_STREAK_BEGINNER, 2),
+            (AchievementType.SCIENCE_MASTER, 15),
+            (AchievementType.PERFECT_STREAK_LEGEND, 50),
+            (AchievementType.UNSTOPPABLE_GENIUS, 100)
+        ]
+        
+        # Get all achievements for the child
+        all_achievements = await achievement_repo.get_child_achievements(child_id)
+        
+        # Find streak achievements and next milestone
+        for achievement in all_achievements:
+            if "streak" in achievement.type:
+                streak_achievements.append(achievement)
+        
+        # Find next streak achievement
+        for achievement_type, required_streak in streak_milestones:
+            if not any(a.type == achievement_type for a in streak_achievements):
+                next_achievement = Achievement(
+                    child_id=child_id,
+                    type=achievement_type,
+                    title=ACHIEVEMENTS[achievement_type]["title"],
+                    description=ACHIEVEMENTS[achievement_type]["description"]
+                )
+                # Calculate progress to next achievement
+                streak_progress = (current_streak / required_streak) * 100
+                break
+        
+        return StreakResponse(
+            current_streak=current_streak,
+            total_correct=total_correct,
+            next_streak_achievement=next_achievement,
+            streak_achievements=streak_achievements,
+            streak_progress=streak_progress
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting streak info for child {child_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve streak information"
+        ) 
