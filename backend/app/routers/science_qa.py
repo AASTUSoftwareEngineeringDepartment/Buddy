@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from app.models.science_qa import (
     QuestionGenerationRequest, 
     QuestionGenerationResponse, 
@@ -9,7 +9,10 @@ from app.models.science_qa import (
 from app.services.vector_store import VectorStore
 from app.services.pdf_processor import PDFProcessor
 from app.services.llm.llm_service import LLMService
-from typing import List
+from app.repositories.science_question_repository import ScienceQuestionRepository
+from app.api.v1.dependencies.auth import get_current_user, require_role
+from app.models.enums import UserRole
+from typing import List, Optional
 import os
 import json
 import logging
@@ -25,6 +28,7 @@ router = APIRouter(prefix="/science", tags=["science"])
 vector_store = VectorStore()
 pdf_processor = PDFProcessor()
 llm_service = LLMService()
+question_repository = ScienceQuestionRepository()
 
 def get_question_schema():
     return {
@@ -117,7 +121,10 @@ async def process_pdf(request: PDFProcessingRequest) -> PDFProcessingResponse:
         )
 
 @router.post("/generate-question", response_model=QuestionGenerationResponse)
-async def generate_question(request: QuestionGenerationRequest) -> QuestionGenerationResponse:
+async def generate_question(
+    request: QuestionGenerationRequest,
+    child_id: str = Depends(require_role(UserRole.CHILD))
+) -> QuestionGenerationResponse:
     try:
         # First try to get a chunk with the specified topic
         try:
@@ -166,13 +173,17 @@ The question should be:
             correct_option_index=qa_data["correct_option_index"],
             difficulty_level=request.difficulty_level,
             age_range=request.age_range,
-            topic=request.topic or "general"
+            topic=request.topic or "general",
+            child_id=child_id  # Use the child_id from the role check
         )
         
-        logger.info(f"Successfully generated question for age range {request.age_range} and difficulty {request.difficulty_level}")
+        # Store the question in the database
+        stored_question = await question_repository.create_question(question)
+        
+        logger.info(f"Successfully generated and stored question for child {child_id}")
         
         return QuestionGenerationResponse(
-            questions=[question],
+            questions=[stored_question],
             source_book=chunk["metadata"]["book_title"]
         )
         
@@ -181,4 +192,70 @@ The question should be:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate question: {str(e)}"
+        )
+
+@router.get("/questions", response_model=List[ScienceQuestion])
+async def get_child_questions(
+    child_id: str = Depends(require_role(UserRole.CHILD)),
+    topic: Optional[str] = None,
+    limit: int = 10
+) -> List[ScienceQuestion]:
+    """Get questions for the current child."""
+    try:
+        if topic:
+            questions = await question_repository.get_questions_by_topic(
+                child_id,
+                topic
+            )
+        else:
+            questions = await question_repository.get_recent_questions(
+                child_id,
+                limit
+            )
+        return questions
+    except Exception as e:
+        logger.error(f"Error retrieving questions: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve questions: {str(e)}"
+        )
+
+@router.get("/parent/questions", response_model=List[ScienceQuestion])
+async def get_parent_questions(
+    parent_id: str = Depends(require_role(UserRole.PARENT)),
+    limit: int = 10
+) -> List[ScienceQuestion]:
+    """Get questions for all children of the current parent."""
+    try:
+        questions = await question_repository.get_questions_by_parent_id(
+            parent_id,
+            limit
+        )
+        return questions
+    except Exception as e:
+        logger.error(f"Error retrieving parent questions: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve questions: {str(e)}"
+        )
+
+@router.get("/parent/child/{child_id}/questions", response_model=List[ScienceQuestion])
+async def get_child_questions_by_parent(
+    child_id: str,
+    parent_id: str = Depends(require_role(UserRole.PARENT)),
+    limit: int = 10
+) -> List[ScienceQuestion]:
+    """Get questions for a specific child, verifying parent relationship."""
+    try:
+        questions = await question_repository.get_child_questions_by_parent(
+            parent_id,
+            child_id,
+            limit
+        )
+        return questions
+    except Exception as e:
+        logger.error(f"Error retrieving child questions: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve questions: {str(e)}"
         ) 

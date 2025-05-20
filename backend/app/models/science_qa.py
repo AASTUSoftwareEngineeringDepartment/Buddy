@@ -25,6 +25,7 @@ class ScienceQuestion(BaseModel):
     age_range: str  # "4-6", "6-8"
     topic: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    child_id: Optional[str] = None  # ID of the child who received this question
 
     @field_serializer('created_at')
     def serialize_created_at(self, created_at: datetime, _info):
@@ -35,6 +36,7 @@ class QuestionGenerationRequest(BaseModel):
     age_range: str = "4-8"
     difficulty_level: str = "easy"
     num_questions: int = 1
+    child_id: Optional[str] = None  # ID of the child requesting the question
 
 class QuestionGenerationResponse(BaseModel):
     questions: List[ScienceQuestion]
