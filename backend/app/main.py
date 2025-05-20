@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.db.mongo import MongoDB
 from app.api.v1.routes import auth, child, story
+from app.routers import science_qa
 from app.config.settings import get_settings
 
 settings = get_settings()
@@ -35,9 +36,10 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(auth.router)
-app.include_router(child.router)
-app.include_router(story.router)
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(child.router, prefix="/api/v1")
+app.include_router(story.router, prefix="/api/v1")
+app.include_router(science_qa.router)
 
 def custom_openapi():
     if app.openapi_schema:

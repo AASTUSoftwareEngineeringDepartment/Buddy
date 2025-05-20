@@ -19,3 +19,9 @@ pytest==8.0.0
 pytest-asyncio==0.23.5
 httpx==0.27.0
 mongomock==4.1.2
+# New dependencies for RAG system
+pdfplumber==0.10.3
+langchain==0.1.9
+langchain-text-splitters==0.0.1
+sentence-transformers==2.5.1
+chromadb==0.4.22
