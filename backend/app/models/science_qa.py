@@ -26,10 +26,18 @@ class ScienceQuestion(BaseModel):
     topic: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     child_id: Optional[str] = None  # ID of the child who received this question
+    solved: bool = False  # Whether the question has been answered
+    selected_answer: Optional[int] = None  # The answer selected by the child
+    is_correct: Optional[bool] = None  # Whether the selected answer was correct
+    answered_at: Optional[datetime] = None  # When the question was answered
 
     @field_serializer('created_at')
     def serialize_created_at(self, created_at: datetime, _info):
         return created_at.isoformat()
+
+    @field_serializer('answered_at')
+    def serialize_answered_at(self, answered_at: Optional[datetime], _info):
+        return answered_at.isoformat() if answered_at else None
 
 class QuestionGenerationRequest(BaseModel):
     topic: Optional[str] = None
@@ -58,4 +66,12 @@ class PDFProcessingResponse(BaseModel):
 
     @field_serializer('processed_at')
     def serialize_processed_at(self, processed_at: datetime, _info):
-        return processed_at.isoformat() 
+        return processed_at.isoformat()
+
+class AnswerQuestionRequest(BaseModel):
+    question_id: str
+    selected_index: int
+
+class AnswerQuestionResponse(BaseModel):
+    is_correct: bool
+    question: ScienceQuestion 

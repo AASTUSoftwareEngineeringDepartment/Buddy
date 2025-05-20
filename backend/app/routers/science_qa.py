@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from app.models.science_qa import (
     QuestionGenerationRequest, 
     QuestionGenerationResponse, 
     ScienceQuestion,
     PDFProcessingRequest,
-    PDFProcessingResponse
+    PDFProcessingResponse,
+    AnswerQuestionRequest,
+    AnswerQuestionResponse
 )
 from app.services.vector_store import VectorStore
 from app.services.pdf_processor import PDFProcessor
@@ -258,4 +260,41 @@ async def get_child_questions_by_parent(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve questions: {str(e)}"
-        ) 
+        )
+
+@router.post("/answer", response_model=AnswerQuestionResponse)
+async def answer_question(
+    request: AnswerQuestionRequest,
+    child_id: str = Depends(require_role(UserRole.CHILD))
+):
+    """
+    Answer a science question and get feedback.
+    Only accessible by children.
+    """
+    try:
+        repository = ScienceQuestionRepository()
+        
+        # Verify the question belongs to this child
+        question = await repository.get_question_by_id(request.question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail="Question not found")
+            
+        if question.child_id != child_id:
+            raise HTTPException(status_code=403, detail="Not authorized to answer this question")
+            
+        # Process the answer
+        is_correct, updated_question = await repository.answer_question(
+            request.question_id,
+            request.selected_index
+        )
+        
+        return AnswerQuestionResponse(
+            is_correct=is_correct,
+            question=updated_question
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error answering question: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to process answer") 

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from app.models.science_qa import ScienceQuestion
 from app.db.mongo import MongoDB
 from datetime import datetime
@@ -24,11 +24,46 @@ class ScienceQuestionRepository:
         """Create a new science question."""
         question_dict = question.model_dump()
         question_dict["created_at"] = datetime.utcnow()
+        question_dict["solved"] = False  # Initialize as not solved
         
         result = await self.collection.insert_one(question_dict)
         question_dict["_id"] = result.inserted_id
         
         return ScienceQuestion(**question_dict)
+
+    async def answer_question(self, question_id: str, selected_index: int) -> Tuple[bool, ScienceQuestion]:
+        """Answer a question and mark it as solved."""
+        # Get the question
+        question = await self.collection.find_one({"question_id": question_id})
+        if not question:
+            raise ValueError("Question not found")
+            
+        # Check if already solved correctly
+        if question.get("solved", False) and question.get("is_correct", False):
+            raise ValueError("Question already solved correctly")
+            
+        # Check if answer is correct
+        is_correct = selected_index == question["correct_option_index"]
+        
+        # Update the question
+        update_result = await self.collection.update_one(
+            {"question_id": question_id},
+            {
+                "$set": {
+                    "solved": True,
+                    "selected_answer": selected_index,
+                    "is_correct": is_correct,
+                    "answered_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        if update_result.modified_count == 0:
+            raise ValueError("Failed to update question")
+            
+        # Get updated question
+        updated_question = await self.collection.find_one({"question_id": question_id})
+        return is_correct, ScienceQuestion(**updated_question)
 
     async def get_questions_by_child_id(self, child_id: str) -> List[ScienceQuestion]:
         """Get all questions for a specific child."""
