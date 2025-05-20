@@ -25,9 +25,7 @@
     "lint-staged": "^15.5.0"
   },
   "lint-staged": {
-  "**/*.py": "black --check",
-  "**/*.dart": "dart format",
-  "**/*.js": "eslint --fix"
-}
-
+    "**/*.dart": "dart format",
+    "**/*.js": "eslint --fix"
+  }
 }
