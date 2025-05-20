@@ -28,8 +28,9 @@ class ScienceQuestion(BaseModel):
     child_id: Optional[str] = None  # ID of the child who received this question
     solved: bool = False  # Whether the question has been answered
     selected_answer: Optional[int] = None  # The answer selected by the child
-    is_correct: Optional[bool] = None  # Whether the selected answer was correct
+    scored: Optional[bool] = None  # Whether the selected answer was correct
     answered_at: Optional[datetime] = None  # When the question was answered
+    attempts: int = 0  # Number of attempts made to answer the question
 
     @field_serializer('created_at')
     def serialize_created_at(self, created_at: datetime, _info):

@@ -25,6 +25,7 @@ class ScienceQuestionRepository:
         question_dict = question.model_dump()
         question_dict["created_at"] = datetime.utcnow()
         question_dict["solved"] = False  # Initialize as not solved
+        question_dict["attempts"] = 0  # Initialize attempts counter
         
         result = await self.collection.insert_one(question_dict)
         question_dict["_id"] = result.inserted_id
@@ -39,7 +40,7 @@ class ScienceQuestionRepository:
             raise ValueError("Question not found")
             
         # Check if already solved correctly
-        if question.get("solved", False) and question.get("is_correct", False):
+        if question.get("solved", False) and question.get("scored", False):
             raise ValueError("Question already solved correctly")
             
         # Check if answer is correct
@@ -52,8 +53,11 @@ class ScienceQuestionRepository:
                 "$set": {
                     "solved": True,
                     "selected_answer": selected_index,
-                    "is_correct": is_correct,
+                    "scored": is_correct,
                     "answered_at": datetime.utcnow()
+                },
+                "$inc": {
+                    "attempts": 1  # Increment attempts counter
                 }
             }
         )
@@ -131,4 +135,25 @@ class ScienceQuestionRepository:
         ).sort("created_at", -1).limit(limit)
         
         questions = await cursor.to_list(length=None)
-        return [ScienceQuestion(**question) for question in questions] 
+        return [ScienceQuestion(**question) for question in questions]
+
+    async def get_random_unsolved_question(self, child_id: str) -> Optional[ScienceQuestion]:
+        """Get a random unsolved or incorrectly answered question for a child."""
+        # Use aggregation to get a random question that is either unsolved or incorrectly answered
+        pipeline = [
+            {
+                "$match": {
+                    "child_id": child_id,
+                    "$or": [
+                        {"solved": False},
+                        {"solved": True, "scored": False}
+                    ]
+                }
+            },
+            {"$sample": {"size": 1}}  # Get one random document
+        ]
+        
+        result = await self.collection.aggregate(pipeline).to_list(length=1)
+        if result:
+            return ScienceQuestion(**result[0])
+        return None 

@@ -19,6 +19,7 @@ import os
 import json
 import logging
 from dotenv import load_dotenv
+import random
 
 load_dotenv()
 
@@ -128,7 +129,18 @@ async def generate_question(
     child_id: str = Depends(require_role(UserRole.CHILD))
 ) -> QuestionGenerationResponse:
     try:
-        # First try to get a chunk with the specified topic
+        # 70% chance to generate new question, 30% chance to get existing unsolved question
+        if random.random() < 0.3:  # 30% chance
+            # Try to get an existing unsolved or incorrect question
+            existing_question = await question_repository.get_random_unsolved_question(child_id)
+            if existing_question:
+                logger.info(f"Returning existing unsolved question for child {child_id}")
+                return QuestionGenerationResponse(
+                    questions=[existing_question],
+                    source_book="Previously generated question"
+                )
+        
+        # If no existing question found or 70% chance hit, generate new question
         try:
             chunk = vector_store.get_random_chunk(request.topic)
             logger.info(f"Found chunk for topic: {request.topic}")
@@ -176,13 +188,13 @@ The question should be:
             difficulty_level=request.difficulty_level,
             age_range=request.age_range,
             topic=request.topic or "general",
-            child_id=child_id  # Use the child_id from the role check
+            child_id=child_id
         )
         
         # Store the question in the database
         stored_question = await question_repository.create_question(question)
         
-        logger.info(f"Successfully generated and stored question for child {child_id}")
+        logger.info(f"Successfully generated and stored new question for child {child_id}")
         
         return QuestionGenerationResponse(
             questions=[stored_question],
