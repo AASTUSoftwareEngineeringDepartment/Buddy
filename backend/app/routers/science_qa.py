@@ -11,12 +11,15 @@ from app.models.science_qa import (
     AchievementType,
     StreakResponse,
     Achievement,
-    ACHIEVEMENTS
+    ACHIEVEMENTS,
+    Reward
 )
 from app.services.vector_store import VectorStore
 from app.services.pdf_processor import PDFProcessor
 from app.services.llm.llm_service import LLMService
 from app.repositories.science_question_repository import ScienceQuestionRepository
+from app.repositories.achievement_repository import AchievementRepository
+from app.repositories.reward_repository import RewardRepository
 from app.api.v1.dependencies.auth import get_current_user, require_role
 from app.models.enums import UserRole
 from typing import List, Optional
@@ -25,7 +28,6 @@ import json
 import logging
 from dotenv import load_dotenv
 import random
-from app.repositories.achievement_repository import AchievementRepository
 from fastapi import status
 
 load_dotenv()
@@ -40,6 +42,7 @@ pdf_processor = PDFProcessor()
 llm_service = LLMService()
 question_repository = ScienceQuestionRepository()
 achievement_repo = AchievementRepository()
+reward_repo = RewardRepository()
 
 def get_question_repository() -> ScienceQuestionRepository:
     """Dependency to get an instance of ScienceQuestionRepository."""
@@ -48,6 +51,10 @@ def get_question_repository() -> ScienceQuestionRepository:
 def get_achievement_repository() -> AchievementRepository:
     """Dependency to get an instance of AchievementRepository."""
     return AchievementRepository()
+
+def get_reward_repository() -> RewardRepository:
+    """Dependency to get an instance of RewardRepository."""
+    return RewardRepository()
 
 def get_question_schema():
     return {
@@ -302,6 +309,7 @@ async def answer_question(
     try:
         repository = ScienceQuestionRepository()
         achievement_repo = AchievementRepository()
+        reward_repo = RewardRepository()
         
         # Verify the question belongs to this child
         question = await repository.get_question_by_id(request.question_id)
@@ -317,9 +325,12 @@ async def answer_question(
             request.selected_index
         )
         
-        # If answer is correct, check for achievements
+        # If answer is correct, add XP and check for achievements
         new_achievements = []
         if is_correct:
+            # Add 1 XP for correct answer
+            await reward_repo.add_xp_for_question(child_id)
+            
             # Get current streak and total correct answers
             current_streak = await repository.get_current_streak(child_id)
             total_correct = await repository.get_total_correct(child_id)
@@ -330,6 +341,10 @@ async def answer_question(
                 current_streak=current_streak,
                 total_correct=total_correct
             )
+            
+            # Add 5 XP for each new achievement
+            for achievement in new_achievements:
+                await reward_repo.add_xp_for_achievement(child_id)
         
         return AnswerQuestionResponse(
             is_correct=is_correct,
@@ -459,4 +474,26 @@ async def get_streak_info(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve streak information"
+        )
+
+@router.get("/rewards", response_model=Reward)
+async def get_child_rewards(
+    child_id: str = Depends(require_role(UserRole.CHILD)),
+    reward_repo: RewardRepository = Depends(get_reward_repository)
+):
+    """
+    Get current level and XP for a child.
+    """
+    try:
+        reward = await reward_repo.get_reward(child_id)
+        if not reward:
+            # Create initial reward record if none exists
+            reward = Reward(child_id=child_id)
+            reward = await reward_repo.create_reward(reward)
+        return reward
+    except Exception as e:
+        logger.error(f"Error getting rewards for child {child_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve rewards"
         ) 
