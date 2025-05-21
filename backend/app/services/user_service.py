@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 from app.db.mongo import MongoDB
 from app.models.user import Parent, Child, UserProfileResponse
+from app.models.settings import Settings
 from app.models.enums import UserRole
 from app.core.security import get_password_hash, verify_password, create_token_for_user
 from app.core.exceptions import UserAlreadyExists, InvalidCredentials, UserNotFound
@@ -13,6 +14,7 @@ class UserService:
         self.db = MongoDB.get_db()
         self.parents_collection = self.db["parents"]
         self.children_collection = self.db["children"]
+        self.settings_collection = self.db["settings"]
         self.email_service = EmailService()
 
     async def check_email_available(self, email: str):
@@ -80,6 +82,18 @@ class UserService:
 
         # Save child to database
         await self.children_collection.insert_one(child.model_dump())
+
+        # Create default settings for the child
+        settings = Settings(
+            child_id=child.child_id,
+            preferences=[],
+            themes=[],
+            moral_values=[],
+            favorite_animal=None,
+            favorite_character=None,
+            screen_time=0
+        )
+        await self.settings_collection.insert_one(settings.model_dump(by_alias=True))
 
         # Send email to parent with child's credentials
         try:
