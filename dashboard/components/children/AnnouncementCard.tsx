@@ -9,6 +9,8 @@ interface AnnouncementCardProps {
 	primaryButton?: {text: string; onClick?: () => void; icon?: ReactNode};
 	secondaryButton?: {text: string; href: string};
 	gradient?: string;
+	titleClassName?: string;
+	descriptionClassName?: string;
 }
 
 export function AnnouncementCard({
@@ -18,6 +20,8 @@ export function AnnouncementCard({
 	primaryButton,
 	secondaryButton,
 	gradient = "linear-gradient(90deg, #344e41 0%, #588157 60%, #a3b18a 100%)",
+	titleClassName = "font-extrabold text-3xl mb-2 drop-shadow-lg",
+	descriptionClassName = "text-lg opacity-95 font-medium max-w-2xl drop-shadow-md",
 }: AnnouncementCardProps) {
 	return (
 		<div
@@ -27,8 +31,8 @@ export function AnnouncementCard({
 			<div className='flex items-center gap-6 flex-1 w-full'>
 				<div className='flex-shrink-0 flex items-center justify-center w-20 h-20 rounded-full bg-white/20'>{icon}</div>
 				<div>
-					<div className='font-extrabold text-3xl mb-2 drop-shadow-lg'>{title}</div>
-					<div className='text-lg opacity-95 font-medium max-w-2xl drop-shadow-md'>{description}</div>
+					<div className={titleClassName}>{title}</div>
+					<div className={descriptionClassName}>{description}</div>
 				</div>
 			</div>
 			<div className='flex flex-col md:flex-row gap-4 mt-8 md:mt-0 md:ml-8'>

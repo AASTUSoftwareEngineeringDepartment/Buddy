@@ -17,6 +17,7 @@ import {AddChildCard} from "@/components/children/AddChildCard";
 import {ChildrenTable} from "@/components/children/ChildrenTable";
 import {StatCard} from "@/components/children/StatCard";
 import {Users, UserCheck, UserX} from "lucide-react";
+import {MessageCircle} from "lucide-react";
 
 export default function ChildrenPage() {
 	const [children, setChildren] = useState<Child[]>([]);
@@ -79,11 +80,13 @@ export default function ChildrenPage() {
 			</div>
 			{/* Full width announcement card */}
 			<AnnouncementCard
-				title='October Report'
-				description='With the aid of our AI analysis you can receive a thoroughly informed and comprehensive evaluation of your data'
-				icon={<Wand2 className='w-7 h-7 text-white' />}
-				primaryButton={{text: "Try AI", icon: <Wand2 className='w-4 h-4' />}}
-				secondaryButton={{text: "Learn More", href: "/learn-more"}}
+				title='Chat with Buddy AI about your child'
+				description="Get instant answers about your child's progress, achievements, and more. Just ask our smart chatbot!"
+				icon={<MessageCircle className='w-7 h-7 text-white' />}
+				primaryButton={{text: "Chat Now", icon: <MessageCircle className='w-4 h-4' />}}
+				secondaryButton={{text: "Learn More", href: "/help/chatbot"}}
+				titleClassName='text-2xl md:text-3xl font-extrabold'
+				descriptionClassName='text-sm md:text-sm font-thin leading-snug'
 			/>
 			{/* Split row: table left, stat cards right */}
 			<div className='flex flex-col lg:flex-row gap-8'>
