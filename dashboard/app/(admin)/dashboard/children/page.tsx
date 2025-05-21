@@ -13,22 +13,25 @@ import Link from "next/link";
 import {Input} from "@/components/ui/input";
 import {AnnouncementCard} from "@/components/children/AnnouncementCard";
 import {Wand2} from "lucide-react";
+import {AddChildCard} from "@/components/children/AddChildCard";
+import {ChildrenTable} from "@/components/children/ChildrenTable";
+import {StatCard} from "@/components/children/StatCard";
+import {Users, UserCheck, UserX} from "lucide-react";
 
 export default function ChildrenPage() {
 	const [children, setChildren] = useState<Child[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");
-	const selectedChild = children.find((c) => c.child_id === selectedId);
+
+	const total = children.length;
+	const active = children.filter((c) => c.status === "Active").length;
+	const inactive = total - active;
 
 	useEffect(() => {
 		const fetchChildren = async () => {
 			try {
 				const data = await childrenApi.getMyChildren();
 				setChildren(data);
-				if (data.length > 0 && !selectedId) {
-					setSelectedId(data[0].child_id);
-				}
 			} catch (error) {
 				console.error("Error fetching children:", error);
 				toast.error("Failed to load children", {
@@ -40,7 +43,7 @@ export default function ChildrenPage() {
 		};
 
 		fetchChildren();
-	}, [selectedId]);
+	}, []);
 
 	if (loading) {
 		return (
@@ -55,7 +58,8 @@ export default function ChildrenPage() {
 	}
 
 	return (
-		<div className='space-y-12'>
+		<div className='space-y-8'>
+			{/* Full width search bar and button */}
 			<div className='flex items-center justify-between gap-4'>
 				<div className='relative flex-1 max-w-sm'>
 					<Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4' />
@@ -73,6 +77,7 @@ export default function ChildrenPage() {
 					</Button>
 				</Link>
 			</div>
+			{/* Full width announcement card */}
 			<AnnouncementCard
 				title='October Report'
 				description='With the aid of our AI analysis you can receive a thoroughly informed and comprehensive evaluation of your data'
@@ -80,16 +85,38 @@ export default function ChildrenPage() {
 				primaryButton={{text: "Try AI", icon: <Wand2 className='w-4 h-4' />}}
 				secondaryButton={{text: "Learn More", href: "/learn-more"}}
 			/>
-
-			<div className='flex gap-6 w-full'>
-				<div className='w-full max-w-xs'>
-					<ChildrenList
+			{/* Split row: table left, stat cards right */}
+			<div className='flex flex-col lg:flex-row gap-8'>
+				<div className='w-1/2 flex flex-col'>
+					<ChildrenTable
 						children={children.filter((child) => `${child.first_name} ${child.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()))}
-						selectedId={selectedId}
-						onSelect={setSelectedId}
 					/>
 				</div>
-				<div className='flex-1'>{selectedChild && <ChildDetails child={selectedChild} />}</div>
+				<div className='w-1/2 flex flex-col gap-6'>
+					<div className='grid grid-cols-2 gap-4'>
+						<StatCard
+							label='Total Children'
+							value={total}
+							icon={<Users className='w-6 h-6' />}
+						/>
+						<StatCard
+							label='Active'
+							value={active}
+							icon={<UserCheck className='w-6 h-6' />}
+						/>
+						<StatCard
+							label='Inactive'
+							value={inactive}
+							icon={<UserX className='w-6 h-6' />}
+						/>
+						<StatCard
+							label='Pending'
+							value={0}
+							icon={<Users className='w-6 h-6' />}
+						/>
+					</div>
+					<AddChildCard />
+				</div>
 			</div>
 		</div>
 	);
