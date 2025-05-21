@@ -6,7 +6,8 @@ from app.models.settings import Settings
 
 class SettingsRepository:
     def __init__(self):
-        self.collection = MongoDB.get_collection("settings")
+        self.db = MongoDB.get_db()
+        self.collection = self.db["settings"]
 
     async def create(self, settings: Settings) -> Settings:
         settings_dict = settings.model_dump(by_alias=True)
