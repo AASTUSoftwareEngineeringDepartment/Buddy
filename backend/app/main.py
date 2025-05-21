@@ -19,8 +19,8 @@ async def lifespan(app: FastAPI):
     await MongoDB.close_db_connection()
 
 app = FastAPI(
-    title="Buddy API",
-    description="API for Buddy application",
+    title="Guade API",
+    description="API for Guade application",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -48,9 +48,9 @@ def custom_openapi():
         return app.openapi_schema
     
     openapi_schema = get_openapi(
-        title="Buddy API",
+        title="Guade API",
         version="1.0.0",
-        description="API for Buddy application",
+        description="API for Guade application",
         routes=app.routes,
     )
     
