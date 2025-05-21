@@ -4,7 +4,10 @@ import {createContext, useContext, useEffect, useState, ReactNode} from "react";
 import {useRouter} from "next/navigation";
 import Cookies from "js-cookie";
 import {authApi, User} from "@/lib/api/auth";
+import {childrenApi} from "@/lib/api/children";
 import {toast} from "sonner";
+import {useDispatch} from "react-redux";
+import {setChildren, clearChildren} from "@/lib/features/childrenSlice";
 
 interface AuthContextType {
 	user: User | null;
@@ -19,6 +22,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
 	const [user, setUser] = useState<User | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const router = useRouter();
+	const dispatch = useDispatch();
 
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -30,14 +34,18 @@ export function AuthProvider({children}: {children: ReactNode}) {
 			try {
 				const userData = await authApi.getCurrentUser();
 				setUser(userData);
+				// Fetch children and store in Redux
+				const children = await childrenApi.getMyChildren();
+				dispatch(setChildren(children));
 			} catch (error) {
 				setUser(null);
+				dispatch(clearChildren());
 			} finally {
 				setIsLoading(false);
 			}
 		};
 		fetchUser();
-	}, []);
+	}, [dispatch]);
 
 	const login = async (username: string, password: string) => {
 		try {
@@ -60,6 +68,10 @@ export function AuthProvider({children}: {children: ReactNode}) {
 			const userData = await authApi.getCurrentUser();
 			setUser(userData);
 
+			// Fetch children and store in Redux
+			const children = await childrenApi.getMyChildren();
+			dispatch(setChildren(children));
+
 			// Show success toast
 			toast.success("Login Successful", {
 				description: "Welcome back to your dashboard",
@@ -68,6 +80,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
 			router.push("/dashboard");
 		} catch (error: any) {
 			console.error("Login error:", error);
+			dispatch(clearChildren());
 			toast.error(error.response?.data?.message || "Invalid username or password", {
 				description: "Please check your credentials and try again",
 				duration: 5000,
@@ -80,6 +93,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
 		try {
 			await authApi.logout();
 			setUser(null);
+			dispatch(clearChildren());
 			toast.success("Logged out successfully");
 			router.push("/login");
 		} catch (error) {

@@ -1,48 +1,24 @@
 "use client";
 
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
-import {Overview} from "@/components/dashboard/overview";
 import {Button} from "@/components/ui/button";
 import {CalendarDateRangePicker} from "@/components/dashboard/date-range-picker";
 import {Download, Users, Activity, CalendarCheck, Trophy, BookOpen, HelpCircle} from "lucide-react";
 import {StatCard} from "@/components/dashboard/stat-card";
 import {useState} from "react";
 import {useAuth} from "@/lib/context/auth-context";
+import {Overview} from "@/components/dashboard/overview";
+import {useSelector} from "react-redux";
+import {RootState} from "@/lib/store";
+
+// Create a client component wrapper for Overview
+function OverviewWrapper() {
+	return <Overview />;
+}
 
 const children = [
 	{name: "Emma", id: 1},
 	{name: "Liam", id: 2},
-];
-
-const stats = [
-	{
-		label: "Total Children",
-		value: children.length,
-		icon: <Users className='w-7 h-7' />,
-		color: "bg-secondary",
-		iconColor: "text-primary",
-	},
-	{
-		label: "Recent Activity",
-		value: "5 actions",
-		icon: <Activity className='w-7 h-7' />,
-		color: "bg-secondary",
-		iconColor: "text-primary",
-	},
-	{
-		label: "Upcoming Quizzes",
-		value: 2,
-		icon: <CalendarCheck className='w-7 h-7' />,
-		color: "bg-secondary",
-		iconColor: "text-primary",
-	},
-	{
-		label: "Weekly Achievements",
-		value: 3,
-		icon: <Trophy className='w-7 h-7' />,
-		color: "bg-secondary",
-		iconColor: "text-primary",
-	},
 ];
 
 const childProgress = {
@@ -91,6 +67,38 @@ export default function DashboardPage() {
 	const [selectedChild, setSelectedChild] = useState(children[0].name);
 	const progress = childProgress[selectedChild as keyof typeof childProgress];
 	const {user} = useAuth();
+	const childrenCount = useSelector((state: RootState) => state.children.children.length);
+
+	const stats = [
+		{
+			label: "Total Children",
+			value: childrenCount,
+			icon: <Users className='w-7 h-7' />,
+			color: "bg-secondary",
+			iconColor: "text-primary",
+		},
+		{
+			label: "Recent Activity",
+			value: "5 actions",
+			icon: <Activity className='w-7 h-7' />,
+			color: "bg-secondary",
+			iconColor: "text-primary",
+		},
+		{
+			label: "Upcoming Quizzes",
+			value: 2,
+			icon: <CalendarCheck className='w-7 h-7' />,
+			color: "bg-secondary",
+			iconColor: "text-primary",
+		},
+		{
+			label: "Weekly Achievements",
+			value: 3,
+			icon: <Trophy className='w-7 h-7' />,
+			color: "bg-secondary",
+			iconColor: "text-primary",
+		},
+	];
 
 	return (
 		<div className='space-y-8'>
@@ -116,6 +124,17 @@ export default function DashboardPage() {
 					/>
 				))}
 			</div>
+
+			{/* Overview Chart */}
+			<Card className='rounded-3xl p-6'>
+				<CardHeader>
+					<CardTitle>Overview</CardTitle>
+					<CardDescription>Monthly activity overview</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<OverviewWrapper />
+				</CardContent>
+			</Card>
 
 			{/* Child Progress Section */}
 			<Card className='rounded-3xl p-6 flex flex-col gap-6'>

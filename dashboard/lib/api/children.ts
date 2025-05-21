@@ -15,7 +15,7 @@ export interface Child {
 
 export const childrenApi = {
 	getMyChildren: async (): Promise<Child[]> => {
-		const response = await api.get<Child[]>("/children/my-children");
+		const response = await api.get<Child[]>("/api/v1/children/my-children");
 		return response.data;
 	},
 };

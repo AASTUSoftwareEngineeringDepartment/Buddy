@@ -4,7 +4,6 @@ import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {cn} from "@/lib/utils";
 import {Button} from "@/components/ui/button";
-import {ScrollArea} from "@/components/ui/scroll-area";
 import {Sheet, SheetContent, SheetTrigger} from "@/components/ui/sheet";
 import {Menu} from "lucide-react";
 
@@ -49,22 +48,20 @@ export function DashboardNav() {
 				>
 					<div className='px-7 py-6'>
 						<h2 className='mb-2 px-4 text-lg font-semibold tracking-tight'>Dashboard</h2>
-						<ScrollArea className='my-4 h-[calc(100vh-8rem)] pb-10'>
-							<div className='flex flex-col space-y-3'>
-								{sidebarNavItems.map((item) => (
-									<Link
-										key={item.href}
-										href={item.href}
-										className={cn(
-											"flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-											pathname === item.href ? "bg-accent" : "transparent"
-										)}
-									>
-										{item.title}
-									</Link>
-								))}
-							</div>
-						</ScrollArea>
+						<div className='flex flex-col space-y-3'>
+							{sidebarNavItems.map((item) => (
+								<Link
+									key={item.href}
+									href={item.href}
+									className={cn(
+										"flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+										pathname === item.href ? "bg-accent" : "transparent"
+									)}
+								>
+									{item.title}
+								</Link>
+							))}
+						</div>
 					</div>
 				</SheetContent>
 			</Sheet>
@@ -74,22 +71,20 @@ export function DashboardNav() {
 				<div className='flex h-full flex-col'>
 					<div className='px-7 py-6'>
 						<h2 className='mb-2 px-4 text-lg font-semibold tracking-tight'>Dashboard</h2>
-						<ScrollArea className='my-4 h-[calc(100vh-8rem)] pb-10'>
-							<div className='flex flex-col space-y-3'>
-								{sidebarNavItems.map((item) => (
-									<Link
-										key={item.href}
-										href={item.href}
-										className={cn(
-											"flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-											pathname === item.href ? "bg-accent" : "transparent"
-										)}
-									>
-										{item.title}
-									</Link>
-								))}
-							</div>
-						</ScrollArea>
+						<div className='flex flex-col space-y-3'>
+							{sidebarNavItems.map((item) => (
+								<Link
+									key={item.href}
+									href={item.href}
+									className={cn(
+										"flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+										pathname === item.href ? "bg-accent" : "transparent"
+									)}
+								>
+									{item.title}
+								</Link>
+							))}
+						</div>
 					</div>
 				</div>
 			</div>
