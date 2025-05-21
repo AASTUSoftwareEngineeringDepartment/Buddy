@@ -7,8 +7,8 @@ import {CalendarDateRangePicker} from "@/components/dashboard/date-range-picker"
 import {Download, Users, Activity, CalendarCheck, Trophy, BookOpen, HelpCircle} from "lucide-react";
 import {StatCard} from "@/components/dashboard/stat-card";
 import {useState} from "react";
+import {useAuth} from "@/lib/context/auth-context";
 
-const parentName = "Alex";
 const children = [
 	{name: "Emma", id: 1},
 	{name: "Liam", id: 2},
@@ -90,13 +90,14 @@ function ProgressChart({scores}: {scores: number[]}) {
 export default function DashboardPage() {
 	const [selectedChild, setSelectedChild] = useState(children[0].name);
 	const progress = childProgress[selectedChild as keyof typeof childProgress];
+	const {user} = useAuth();
 
 	return (
 		<div className='space-y-8'>
 			{/* Welcome Card */}
 			<Card className='rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between'>
 				<div>
-					<h1 className='text-3xl md:text-4xl font-bold text-card-foreground mb-2'>Welcome, {parentName}! 👋</h1>
+					<h1 className='text-3xl md:text-4xl font-bold text-card-foreground mb-2'>Welcome, {user ? user.first_name : "Parent"}! 👋</h1>
 					<p className='text-lg text-muted-foreground'>Here's what's happening with your children this week.</p>
 				</div>
 				<img

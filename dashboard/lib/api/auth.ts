@@ -1,6 +1,18 @@
 import api from "../axios";
 import Cookies from "js-cookie";
 
+export interface User {
+	user_id: string;
+	username: string;
+	first_name: string;
+	last_name: string;
+	role: string;
+	email: string;
+	birth_date: string | null;
+	nickname: string | null;
+	created_at: string;
+}
+
 interface LoginCredentials {
 	username: string;
 	password: string;
@@ -55,5 +67,10 @@ export const authApi = {
 			localStorage.removeItem("user_id");
 			throw error; // Re-throw to handle in the UI
 		}
+	},
+
+	getCurrentUser: async (): Promise<User> => {
+		const response = await api.get<User>("/api/v1/auth/me");
+		return response.data;
 	},
 };

@@ -3,13 +3,8 @@
 import {createContext, useContext, useEffect, useState, ReactNode} from "react";
 import {useRouter} from "next/navigation";
 import Cookies from "js-cookie";
-import {authApi} from "@/lib/api/auth";
+import {authApi, User} from "@/lib/api/auth";
 import {toast} from "sonner";
-
-interface User {
-	user_id: string;
-	role: string;
-}
 
 interface AuthContextType {
 	user: User | null;
@@ -26,15 +21,22 @@ export function AuthProvider({children}: {children: ReactNode}) {
 	const router = useRouter();
 
 	useEffect(() => {
-		// Check for existing session on mount
-		const token = Cookies.get("token");
-		const role = Cookies.get("role");
-		const user_id = localStorage.getItem("user_id");
-
-		if (token && role && user_id) {
-			setUser({user_id, role});
-		}
-		setIsLoading(false);
+		const fetchUser = async () => {
+			const token = Cookies.get("token");
+			if (!token) {
+				setIsLoading(false);
+				return;
+			}
+			try {
+				const userData = await authApi.getCurrentUser();
+				setUser(userData);
+			} catch (error) {
+				setUser(null);
+			} finally {
+				setIsLoading(false);
+			}
+		};
+		fetchUser();
 	}, []);
 
 	const login = async (username: string, password: string) => {
@@ -54,14 +56,9 @@ export function AuthProvider({children}: {children: ReactNode}) {
 			Cookies.set("token", response.access_token, {expires: 7});
 			Cookies.set("role", response.role, {expires: 7});
 
-			// Store user ID in localStorage
-			localStorage.setItem("user_id", response.user_id);
-
-			// Update user state
-			setUser({
-				user_id: response.user_id,
-				role: response.role,
-			});
+			// Fetch and set full user info
+			const userData = await authApi.getCurrentUser();
+			setUser(userData);
 
 			// Show success toast
 			toast.success("Login Successful", {

@@ -6,10 +6,12 @@ import {usePathname} from "next/navigation";
 import {Users, Plus, ChevronDown, ChevronUp, LogOut} from "lucide-react";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {MAIN_SIDEBAR_MENUS, WORKSPACE_MENUS, SidebarMenuItem} from "@/lib/constants/sidebar-menus";
+import {useAuth} from "@/lib/context/auth-context";
 
 export function NewSidebar() {
 	const [workspaceOpen, setWorkspaceOpen] = useState(true);
 	const pathname = usePathname();
+	const {user} = useAuth();
 
 	return (
 		<aside className='flex flex-col h-screen w-72 bg-white border-r px-6 py-6 justify-between'>
@@ -75,8 +77,8 @@ export function NewSidebar() {
 					<AvatarFallback>ID</AvatarFallback>
 				</Avatar>
 				<div className='flex-1 min-w-0'>
-					<div className='font-semibold text-sm truncate'>Icon Designer</div>
-					<div className='text-xs text-gray-500 truncate'>iconsha@gmail.com</div>
+					<div className='font-semibold text-sm truncate'>{user ? `${user.first_name} ${user.last_name}` : "Loading..."}</div>
+					<div className='text-xs text-gray-500 truncate'>{user ? user.email : ""}</div>
 				</div>
 				<button className='p-1 rounded hover:bg-gray-100'>
 					<LogOut className='w-5 h-5 text-gray-400' />
