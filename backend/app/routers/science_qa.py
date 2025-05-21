@@ -14,6 +14,7 @@ from app.models.science_qa import (
     ACHIEVEMENTS,
     Reward
 )
+from app.models.user import Child
 from app.services.vector_store import VectorStore
 from app.services.pdf_processor import PDFProcessor
 from app.services.llm.llm_service import LLMService
@@ -22,6 +23,7 @@ from app.repositories.achievement_repository import AchievementRepository
 from app.repositories.reward_repository import RewardRepository
 from app.api.v1.dependencies.auth import get_current_user, require_role
 from app.models.enums import UserRole
+from app.db.mongo import MongoDB
 from typing import List, Optional
 import os
 import json
@@ -43,6 +45,12 @@ llm_service = LLMService()
 question_repository = ScienceQuestionRepository()
 achievement_repo = AchievementRepository()
 reward_repo = RewardRepository()
+
+async def get_child_info(child_id: str) -> Optional[Child]:
+    """Get child information from the database."""
+    db = MongoDB.get_db()
+    child_data = await db["children"].find_one({"child_id": child_id})
+    return Child(**child_data) if child_data else None
 
 def get_question_repository() -> ScienceQuestionRepository:
     """Dependency to get an instance of ScienceQuestionRepository."""
@@ -152,6 +160,18 @@ async def generate_question(
     child_id: str = Depends(require_role(UserRole.CHILD))
 ) -> QuestionGenerationResponse:
     try:
+        # Get child's information
+        child = await get_child_info(child_id)
+        if not child:
+            raise HTTPException(status_code=404, detail="Child not found")
+            
+        # Get child's current level
+        reward_repo = RewardRepository()
+        reward = await reward_repo.get_reward(child_id)
+        if not reward:
+            reward = Reward(child_id=child_id)
+            reward = await reward_repo.create_reward(reward)
+            
         # 70% chance to generate new question, 30% chance to get existing unsolved question
         if random.random() < 0.3:  # 30% chance
             # Try to get an existing unsolved or incorrect question
@@ -174,8 +194,12 @@ async def generate_question(
         
         logger.info(f"Using chunk from book: {chunk['metadata']['book_title']}")
         
+        # Get age range and difficulty level based on child's information
+        age_range = request.get_age_range(child.birth_date)
+        difficulty_level = request.get_difficulty_level(reward.level)
+        
         # Get the system instruction and schema
-        system_instruction = get_system_instruction(request.age_range, request.difficulty_level)
+        system_instruction = get_system_instruction(age_range, difficulty_level)
         response_schema = get_question_schema()
         
         # Create the prompt
@@ -187,8 +211,8 @@ Text content:
 {chunk["content"]}
 
 The question should be:
-- Age-appropriate for {request.age_range} years old
-- {request.difficulty_level} difficulty level
+- Age-appropriate for {age_range} years old
+- {difficulty_level} difficulty level
 - Related to the topic: {request.topic or 'general science'}
 - Fun and engaging
 - Educational and clear
@@ -208,8 +232,8 @@ The question should be:
             question=qa_data["question"],
             options=qa_data["options"],
             correct_option_index=qa_data["correct_option_index"],
-            difficulty_level=request.difficulty_level,
-            age_range=request.age_range,
+            difficulty_level=difficulty_level,
+            age_range=age_range,
             topic=request.topic or "general",
             child_id=child_id
         )

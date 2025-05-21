@@ -196,10 +196,38 @@ class ScienceQuestion(BaseModel):
 
 class QuestionGenerationRequest(BaseModel):
     topic: Optional[str] = None
-    age_range: str = "4-8"
-    difficulty_level: str = "easy"
-    num_questions: int = 1
-    child_id: Optional[str] = None  # ID of the child requesting the question
+    child_id: str  # Required field to get child's age and level
+
+    def get_difficulty_level(self, child_level: int) -> str:
+        """
+        Determine difficulty level based on child's current level:
+        Level 0-3: Easy
+        Level 4-7: Medium
+        Level 8-10: Hard
+        """
+        if child_level <= 3:
+            return "easy"
+        elif child_level <= 7:
+            return "medium"
+        else:
+            return "hard"
+
+    def get_age_range(self, birth_date: datetime) -> str:
+        """
+        Calculate age range based on birth date:
+        4-6 years: "4-6"
+        7-9 years: "7-9"
+        10+ years: "10-12"
+        """
+        today = datetime.utcnow()
+        age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+        
+        if age <= 6:
+            return "4-6"
+        elif age <= 9:
+            return "7-9"
+        else:
+            return "10-12"
 
 class QuestionGenerationResponse(BaseModel):
     questions: List[ScienceQuestion]
