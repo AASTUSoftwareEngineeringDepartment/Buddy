@@ -3,8 +3,9 @@
 import Link from "next/link";
 import {useState} from "react";
 import {usePathname} from "next/navigation";
-import {Home, BarChart2, Calendar, Users, Settings, Plus, ChevronDown, ChevronUp, User as UserIcon, LogOut} from "lucide-react";
+import {Users, Plus, ChevronDown, ChevronUp, LogOut} from "lucide-react";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
+import {MAIN_SIDEBAR_MENUS, WORKSPACE_MENUS, SidebarMenuItem} from "@/lib/constants/sidebar-menus";
 
 export function NewSidebar() {
 	const [workspaceOpen, setWorkspaceOpen] = useState(true);
@@ -20,37 +21,16 @@ export function NewSidebar() {
 				</div>
 				{/* Main Navigation */}
 				<nav className='flex flex-col gap-1 mb-8'>
-					<SidebarNavItem
-						icon={<Home className='w-5 h-5' />}
-						label='Dashboard'
-						href='/dashboard'
-						active={pathname === "/dashboard"}
-					/>
-					<SidebarNavItem
-						icon={<BarChart2 className='w-5 h-5' />}
-						label='Interviews'
-						href='/dashboard/interviews'
-						badge={4}
-						active={pathname === "/dashboard/interviews"}
-					/>
-					<SidebarNavItem
-						icon={<Calendar className='w-5 h-5' />}
-						label='Calendar'
-						href='/dashboard/calendar'
-						active={pathname === "/dashboard/calendar"}
-					/>
-					<SidebarNavItem
-						icon={<Users className='w-5 h-5' />}
-						label='Candidates'
-						href='/dashboard/candidates'
-						active={pathname === "/dashboard/candidates"}
-					/>
-					<SidebarNavItem
-						icon={<Settings className='w-5 h-5' />}
-						label='Settings'
-						href='/dashboard/settings'
-						active={pathname === "/dashboard/settings"}
-					/>
+					{MAIN_SIDEBAR_MENUS.map((item) => (
+						<SidebarNavItem
+							key={item.href}
+							icon={item.icon}
+							label={item.label}
+							href={item.href}
+							badge={item.badge}
+							active={pathname === item.href}
+						/>
+					))}
 				</nav>
 				{/* Workspaces Section */}
 				<div className='mb-2 flex items-center justify-between text-xs text-gray-500 font-semibold uppercase tracking-wide'>
@@ -71,31 +51,16 @@ export function NewSidebar() {
 					</button>
 					{workspaceOpen && (
 						<div className='pl-7 flex flex-col gap-1 mt-1'>
-							<SidebarNavItem
-								label='UI Design'
-								href='/dashboard/ui-design'
-								badge={2}
-								small
-								active={pathname === "/dashboard/ui-design"}
-							/>
-							<SidebarNavItem
-								label='UX Design'
-								href='/dashboard/ux-design'
-								small
-								active={pathname === "/dashboard/ux-design"}
-							/>
-							<SidebarNavItem
-								label='Brand Design'
-								href='/dashboard/brand-design'
-								small
-								active={pathname === "/dashboard/brand-design"}
-							/>
-							<SidebarNavItem
-								label='Marketing Design'
-								href='/dashboard/marketing-design'
-								small
-								active={pathname === "/dashboard/marketing-design"}
-							/>
+							{WORKSPACE_MENUS.map((item) => (
+								<SidebarNavItem
+									key={item.href}
+									label={item.label}
+									href={item.href}
+									badge={item.badge}
+									small
+									active={pathname === item.href}
+								/>
+							))}
 						</div>
 					)}
 				</div>
@@ -121,21 +86,7 @@ export function NewSidebar() {
 	);
 }
 
-function SidebarNavItem({
-	icon,
-	label,
-	href,
-	badge,
-	small,
-	active,
-}: {
-	icon?: React.ReactNode;
-	label: string;
-	href: string;
-	badge?: number;
-	small?: boolean;
-	active?: boolean;
-}) {
+function SidebarNavItem({icon, label, href, badge, small, active}: SidebarMenuItem & {small?: boolean; active?: boolean}) {
 	return (
 		<Link
 			href={href}
@@ -143,7 +94,11 @@ function SidebarNavItem({
 				small ? "text-sm pl-6" : "text-base font-medium"
 			} ${active ? "border-l-4 border-[#344e41] bg-[#f2f5f4] text-[#344e41]" : ""}`}
 		>
-			{icon && <span>{icon}</span>}
+			{icon &&
+				(() => {
+					const Icon = icon;
+					return <Icon className='w-5 h-5' />;
+				})()}
 			<span>{label}</span>
 			{badge !== undefined && <span className='ml-auto bg-[#f2f5f4] text-[#344e41] text-xs font-semibold px-2 py-0.5 rounded-full'>{badge}</span>}
 		</Link>
