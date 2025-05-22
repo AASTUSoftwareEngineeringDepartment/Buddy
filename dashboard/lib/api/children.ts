@@ -23,4 +23,15 @@ export const childrenApi = {
 		const response = await api.put(`/api/v1/children/${child_id}/profile`, profile);
 		return response.data;
 	},
+
+	getChildSettings: async (child_id: string) => {
+		const response = await api.get(`/api/v1/settings/${child_id}`);
+		return response.data;
+	},
+
+	updateChildSettings: async (child_id: string, data: any) => {
+		console.log(data);
+		const response = await api.put(`/api/v1/settings/${child_id}`, data);
+		return response.data;
+	},
 };

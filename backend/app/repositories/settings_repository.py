@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from bson import ObjectId
 from app.db.mongo import MongoDB
-from app.models.settings import Settings
+from app.models.settings import Settings, SettingsUpdate
 
 class SettingsRepository:
     def __init__(self):
@@ -21,15 +21,27 @@ class SettingsRepository:
         return None
 
     async def update(self, child_id: str, settings_update: dict) -> Optional[Settings]:
-        update_data = {
-            **settings_update,
-            "updated_at": datetime.utcnow()
-        }
+        # Get existing settings
+        existing_settings = await self.get_by_child_id(child_id)
+        if not existing_settings:
+            return None
+
+        # Create a SettingsUpdate instance with the update data
+        update_model = SettingsUpdate(**settings_update)
+        
+        # Convert to dict and remove None values
+        update_data = {k: v for k, v in update_model.model_dump().items() if v is not None}
+        
+        # Add updated_at timestamp
+        update_data["updated_at"] = datetime.utcnow()
+
+        # Perform the update
         result = await self.collection.find_one_and_update(
             {"child_id": child_id},
             {"$set": update_data},
             return_document=True
         )
+        
         if result:
             return Settings(**result)
         return None

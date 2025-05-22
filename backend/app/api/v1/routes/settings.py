@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.repositories.settings_repository import SettingsRepository
-from app.models.settings import Settings
+from app.models.settings import Settings, SettingsUpdate
 from app.api.v1.dependencies.auth import require_role, get_current_user
 from app.models.enums import UserRole
 from app.services.user_service import UserService
@@ -67,7 +67,7 @@ async def get_settings(
 @router.put("/{child_id}", response_model=Settings)
 async def update_settings(
     child_id: str,
-    settings_update: Settings,
+    settings_update: SettingsUpdate,
     parent_id: str = Depends(require_role(UserRole.PARENT))
 ):
     # Verify parent-child relationship

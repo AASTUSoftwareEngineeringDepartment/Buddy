@@ -44,6 +44,7 @@ import {ChildDetailsNavbar} from "@/components/child-details/ChildDetailsNavbar"
 import {Dialog} from "@/components/ui/dialog";
 import {Input} from "@/components/ui/input";
 import {EditChildModal} from "@/components/child-details/EditChildModal";
+import {ChildSettingsModal} from "@/components/child-details/ChildSettingsModal";
 
 // Mock data for demonstration
 const mockProgress = {
@@ -200,6 +201,18 @@ export default function ChildDetailsPage() {
 		password: "",
 	});
 
+	// Settings modal state
+	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [settingsLoading, setSettingsLoading] = useState(false);
+	const [settingsForm, setSettingsForm] = useState({
+		favorite_animal: "",
+		favorite_character: "",
+		screen_time: 0,
+		preferences: [],
+		themes: [],
+		moral_values: [],
+	});
+
 	useEffect(() => {
 		const fetchChildDetails = async () => {
 			try {
@@ -259,6 +272,64 @@ export default function ChildDetailsPage() {
 		}
 	};
 
+	// Settings modal handlers
+	const handleSettings = async () => {
+		if (!child) return;
+		setSettingsLoading(true);
+		try {
+			const data = await childrenApi.getChildSettings(child.child_id);
+			setSettingsForm({
+				favorite_animal: data.favorite_animal || "",
+				favorite_character: data.favorite_character || "",
+				screen_time: data.screen_time || 0,
+				preferences: Array.isArray(data.preferences) ? data.preferences : [],
+				themes: Array.isArray(data.themes) ? data.themes : [],
+				moral_values: Array.isArray(data.moral_values) ? data.moral_values : [],
+			});
+			setSettingsOpen(true);
+		} catch (err) {
+			toast.error("Failed to load settings");
+		} finally {
+			setSettingsLoading(false);
+		}
+	};
+
+	const handleSettingsFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const {name, value, type} = e.target;
+		setSettingsForm((prev) => ({
+			...prev,
+			[name]: type === "number" ? Number(value) : value,
+		}));
+	};
+
+	const handleTagsChange = (field: "preferences" | "themes" | "moral_values", tags: string[]) => {
+		setSettingsForm((prev) => ({
+			...prev,
+			[field]: tags,
+		}));
+	};
+
+	const handleSettingsSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!child) return;
+		const payload = {
+			child_id: child.child_id,
+			favorite_animal: settingsForm.favorite_animal,
+			favorite_character: settingsForm.favorite_character,
+			screen_time: settingsForm.screen_time,
+			preferences: settingsForm.preferences,
+			themes: settingsForm.themes,
+			moral_values: settingsForm.moral_values,
+		};
+		try {
+			await childrenApi.updateChildSettings(child.child_id, payload);
+			toast.success("Settings updated!");
+			setSettingsOpen(false);
+		} catch (err) {
+			toast.error("Failed to update settings");
+		}
+	};
+
 	if (loading) {
 		return (
 			<div className='flex items-center justify-center min-h-screen'>
@@ -282,6 +353,7 @@ export default function ChildDetailsPage() {
 					streak: 0,
 				}}
 				onEdit={handleEdit}
+				onSettings={handleSettings}
 			/>
 			<EditChildModal
 				open={editOpen}
@@ -294,6 +366,15 @@ export default function ChildDetailsPage() {
 					nickname: form.nickname,
 				}}
 				handleFormChange={handleFormChange}
+			/>
+			<ChildSettingsModal
+				open={settingsOpen}
+				onOpenChange={setSettingsOpen}
+				onSubmit={handleSettingsSubmit}
+				onCancel={() => setSettingsOpen(false)}
+				form={settingsForm}
+				handleFormChange={handleSettingsFormChange}
+				handleTagsChange={handleTagsChange}
 			/>
 			{/* Top: Profile and Rewards, side by side on desktop */}
 			<div className='grid grid-cols-1 md:grid-cols-3 gap-6 items-start'>

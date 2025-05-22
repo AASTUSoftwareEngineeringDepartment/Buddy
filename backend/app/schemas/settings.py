@@ -1,5 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel
+from app.models.settings import SettingsUpdate
 
 class SettingsBase(BaseModel):
     preferences: List[str] = []
@@ -11,9 +12,6 @@ class SettingsBase(BaseModel):
 
 class SettingsCreate(SettingsBase):
     child_id: int
-
-class SettingsUpdate(SettingsBase):
-    pass
 
 class SettingsInDB(SettingsBase):
     id: int
