@@ -18,4 +18,9 @@ export const childrenApi = {
 		const response = await api.get<Child[]>("/api/v1/children/my-children");
 		return response.data;
 	},
+
+	updateChildProfile: async (child_id: string, profile: Record<string, string>) => {
+		const response = await api.put(`/api/v1/children/${child_id}/profile`, profile);
+		return response.data;
+	},
 };

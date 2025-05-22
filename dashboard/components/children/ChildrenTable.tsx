@@ -1,9 +1,11 @@
 import {Child} from "@/lib/api/children";
 import {UserPlus} from "lucide-react";
+import {useRouter} from "next/navigation";
 
 export function ChildrenTable({children}: {children: Child[]}) {
 	const totalRows = 10;
 	const placeholders = Math.max(0, totalRows - children.length);
+	const router = useRouter();
 	return (
 		<table className='w-full text-left'>
 			<thead>
@@ -19,7 +21,8 @@ export function ChildrenTable({children}: {children: Child[]}) {
 				{children.map((child, idx) => (
 					<tr
 						key={child.child_id}
-						className={`transition hover:bg-[#e9f5ee] ${idx !== totalRows - 1 ? "border-b border-[#e0e4e8]" : ""}`}
+						className={`transition hover:bg-[#e9f5ee] cursor-pointer ${idx !== totalRows - 1 ? "border-b border-[#e0e4e8]" : ""}`}
+						onClick={() => router.push(`/dashboard/children/${child.child_id}`)}
 					>
 						<td className='py-3 px-3 font-semibold text-[#344e41]'>{idx + 1}</td>
 						<td className='py-3 px-3'>

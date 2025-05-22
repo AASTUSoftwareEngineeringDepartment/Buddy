@@ -248,29 +248,35 @@ class UserService:
         if not child:
             raise UserNotFound("Child not found or not associated with this parent")
 
-        # Update child profile
+        # Update child profile - only allow updating first_name, last_name, and nickname
         update_fields = {}
         if "first_name" in update_data and update_data["first_name"]:
             update_fields["first_name"] = update_data["first_name"]
         if "last_name" in update_data and update_data["last_name"]:
             update_fields["last_name"] = update_data["last_name"]
-        if "birth_date" in update_data and update_data["birth_date"]:
-            update_fields["birth_date"] = update_data["birth_date"]
         if "nickname" in update_data and update_data["nickname"]:
             update_fields["nickname"] = update_data["nickname"]
-        if "password" in update_data and update_data["password"]:
-            update_fields["password_hash"] = get_password_hash(update_data["password"])
 
         if not update_fields:
             raise ValueError("No valid fields to update")
 
-        result = await self.children_collection.update_one(
-            {"child_id": child_id},
-            {"$set": update_fields}
-        )
+        try:
+            # Create a new Child instance with updated data
+            updated_child = Child(**{**child, **update_fields})
+            
+            # Convert to dict for MongoDB update
+            update_dict = updated_child.model_dump(exclude_unset=True)
+            
+            result = await self.children_collection.update_one(
+                {"child_id": child_id},
+                {"$set": update_dict}
+            )
 
-        if result.modified_count == 0:
-            raise UserNotFound("Failed to update child profile")
+            if result.modified_count == 0:
+                raise UserNotFound("Failed to update child profile")
 
-        # Get updated child profile
-        return await self.get_user_profile(child_id, UserRole.CHILD) 
+            # Get updated child profile
+            return await self.get_user_profile(child_id, UserRole.CHILD)
+        except Exception as e:
+            print(f"Error updating child profile: {str(e)}")
+            raise UserNotFound(f"Failed to update child profile: {str(e)}") 
