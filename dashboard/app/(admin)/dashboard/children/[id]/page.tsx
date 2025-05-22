@@ -274,7 +274,13 @@ export default function ChildDetailsPage() {
 	return (
 		<div className='px-2 md:px-8 py-8 space-y-8'>
 			<ChildDetailsNavbar
-				child={child}
+				child={{
+					first_name: child.first_name,
+					last_name: child.last_name,
+					nickname: child.nickname,
+					xp: 0,
+					streak: 0,
+				}}
 				onEdit={handleEdit}
 			/>
 			<EditChildModal
