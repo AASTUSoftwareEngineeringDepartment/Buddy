@@ -1,12 +1,12 @@
 import React from "react";
-import {Zap, Settings, Pencil, Flame} from "lucide-react";
+import {Zap, Settings, Pencil, Star} from "lucide-react";
 
 export function ChildDetailsNavbar({
 	child,
 	onEdit,
 	onSettings,
 }: {
-	child: {first_name: string; last_name: string; nickname?: string; xp?: number; streak?: number};
+	child: {first_name: string; last_name: string; nickname?: string; xp?: number; level?: number};
 	onEdit?: () => void;
 	onSettings?: () => void;
 }) {
@@ -26,13 +26,13 @@ export function ChildDetailsNavbar({
 				</span>
 				{child.nickname && <span className='text-sm text-[#588157] font-medium truncate'>{child.nickname}</span>}
 			</div>
-			{/* XP & Streak */}
+			{/* XP & Level */}
 			<div className='flex items-center gap-3'>
 				<div className='flex items-center gap-2 bg-white px-4 py-2 rounded-xl text-[#344e41] font-bold text-lg shadow border border-[#e0e4e8]'>
 					<Zap className='w-5 h-5 text-yellow-500' /> XP: {child.xp ?? 0}
 				</div>
 				<div className='flex items-center gap-2 bg-white px-4 py-2 rounded-xl text-[#344e41] font-bold text-lg shadow border border-[#e0e4e8]'>
-					<Flame className='w-5 h-5 text-orange-500' /> Streak: {child.streak ?? 0}
+					<Star className='w-5 h-5 text-yellow-500' /> Level: {child.level ?? 0}
 				</div>
 			</div>
 			{/* Actions */}

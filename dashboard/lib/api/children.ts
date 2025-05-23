@@ -34,4 +34,14 @@ export const childrenApi = {
 		const response = await api.put(`/api/v1/settings/${child_id}`, data);
 		return response.data;
 	},
+
+	getChildStreak: async (child_id: string) => {
+		const response = await api.get(`/science/parent/child/${child_id}/streak`);
+		return response.data;
+	},
+
+	getChildRewards: async (child_id: string) => {
+		const response = await api.get(`/science/parent/child/${child_id}/rewards`);
+		return response.data;
+	},
 };

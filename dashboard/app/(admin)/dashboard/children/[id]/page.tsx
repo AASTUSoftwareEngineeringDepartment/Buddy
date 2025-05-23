@@ -45,6 +45,8 @@ import {Dialog} from "@/components/ui/dialog";
 import {Input} from "@/components/ui/input";
 import {EditChildModal} from "@/components/child-details/EditChildModal";
 import {ChildSettingsModal} from "@/components/child-details/ChildSettingsModal";
+import {StreakProgress} from "@/components/child-details/StreakProgress";
+import {StreakHeatmap} from "@/components/child-details/StreakHeatmap";
 
 // Mock data for demonstration
 const mockProgress = {
@@ -187,6 +189,16 @@ const mockQuizzes = {
 	},
 };
 
+// Mock activity data for heatmap
+const mockActivityData = [
+	{date: "2023-06-01", count: 2},
+	{date: "2023-06-02", count: 1},
+	{date: "2023-06-03", count: 0},
+	{date: "2023-06-04", count: 4},
+	{date: "2023-06-05", count: 3},
+	// ... add more for demo or generate random data for a year
+];
+
 export default function ChildDetailsPage() {
 	const params = useParams();
 	const router = useRouter();
@@ -213,6 +225,9 @@ export default function ChildDetailsPage() {
 		moral_values: [],
 	});
 
+	const [rewards, setRewards] = useState({xp: 0, level: 0});
+	const [streakData, setStreakData] = useState<any>(null);
+
 	useEffect(() => {
 		const fetchChildDetails = async () => {
 			try {
@@ -233,6 +248,12 @@ export default function ChildDetailsPage() {
 					nickname: childData.nickname ?? "",
 					password: "",
 				});
+
+				const rewardsData = await childrenApi.getChildRewards(childData.child_id);
+				setRewards(rewardsData);
+
+				const streak = await childrenApi.getChildStreak(childData.child_id);
+				setStreakData(streak);
 			} catch (error) {
 				console.error("Error fetching child details:", error);
 				toast.error("Failed to load child details", {
@@ -349,8 +370,8 @@ export default function ChildDetailsPage() {
 					first_name: child.first_name,
 					last_name: child.last_name,
 					nickname: child.nickname,
-					xp: 0,
-					streak: 0,
+					xp: rewards?.xp ?? 0,
+					level: rewards?.level ?? 0,
 				}}
 				onEdit={handleEdit}
 				onSettings={handleSettings}
@@ -376,18 +397,17 @@ export default function ChildDetailsPage() {
 				handleFormChange={handleSettingsFormChange}
 				handleTagsChange={handleTagsChange}
 			/>
-			{/* Top: Profile and Rewards, side by side on desktop */}
-			<div className='grid grid-cols-1 md:grid-cols-3 gap-6 items-start'>
-				<ProfileCard child={child} />
-				<RewardsCard rewards={{xp: 0, streak: 0}} />
-				<StatsGraph stats={{vocabulary: mockVocabularyData.map((data) => data.words), quizScores: [80, 90, 85, 95, 100]}} />
-			</div>
-			{/* Middle: Vocabulary, Stories, Questions, Achievements */}
-			<div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-				<VocabularyList vocabulary={mockVocabularyData.map((data) => data.words)} />
-				<StoriesList stories={mockRecentActivities.map((activity) => ({title: activity.title, date: activity.date}))} />
-				<QuestionsStats questions={{answered: 42, notAnswered: 8}} />
-				<AchievementsList achievements={mockAchievements} />
+			{/* Two-column layout below navbar */}
+			<div className='grid grid-cols-1 md:grid-cols-6 gap-8'>
+				{/* Left column: Streak Progress */}
+				<div className='md:col-span-2'>
+					<StreakProgress streakData={streakData} />
+				</div>
+				{/* Main content right */}
+				<div className='md:col-span-4 flex flex-col gap-8'>
+					<StoriesList stories={mockRecentActivities.map((activity) => ({title: activity.title, date: activity.date}))} />
+					<StreakHeatmap activityData={mockActivityData} />
+				</div>
 			</div>
 		</div>
 	);

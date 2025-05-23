@@ -520,4 +520,123 @@ async def get_child_rewards(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve rewards"
+        )
+
+@router.get("/parent/child/{child_id}/streak", response_model=StreakResponse)
+async def get_child_streak_by_parent(
+    child_id: str,
+    parent_id: str = Depends(require_role(UserRole.PARENT)),
+    question_repo: ScienceQuestionRepository = Depends(get_question_repository),
+    achievement_repo: AchievementRepository = Depends(get_achievement_repository)
+):
+    """
+    Get streak information for a specific child, verifying parent relationship.
+    Only accessible by parents.
+    """
+    try:
+        # Verify parent-child relationship
+        db = MongoDB.get_db()
+        child = await db["children"].find_one({
+            "child_id": child_id,
+            "parent_id": parent_id
+        })
+        
+        if not child:
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to access this child's information"
+            )
+            
+        # Get current streak and total correct
+        current_streak = await question_repo.get_current_streak(child_id)
+        total_correct = await question_repo.get_total_correct(child_id)
+        
+        # Get all streak-based achievements
+        streak_achievements = []
+        next_achievement = None
+        streak_progress = 0.0
+        
+        # Define streak milestones in order
+        streak_milestones = [
+            (AchievementType.PERFECT_STREAK_BEGINNER, 2),
+            (AchievementType.SCIENCE_MASTER, 15),
+            (AchievementType.PERFECT_STREAK_LEGEND, 50),
+            (AchievementType.UNSTOPPABLE_GENIUS, 100)
+        ]
+        
+        # Get all achievements for the child
+        all_achievements = await achievement_repo.get_child_achievements(child_id)
+        
+        # Find streak achievements and next milestone
+        for achievement in all_achievements:
+            if "streak" in achievement.type:
+                streak_achievements.append(achievement)
+        
+        # Find next streak achievement
+        for achievement_type, required_streak in streak_milestones:
+            if not any(a.type == achievement_type for a in streak_achievements):
+                next_achievement = Achievement(
+                    child_id=child_id,
+                    type=achievement_type,
+                    title=ACHIEVEMENTS[achievement_type]["title"],
+                    description=ACHIEVEMENTS[achievement_type]["description"]
+                )
+                # Calculate progress to next achievement
+                streak_progress = (current_streak / required_streak) * 100
+                break
+        
+        return StreakResponse(
+            current_streak=current_streak,
+            total_correct=total_correct,
+            next_streak_achievement=next_achievement,
+            streak_achievements=streak_achievements,
+            streak_progress=streak_progress
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting streak info for child {child_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve streak information"
+        )
+
+@router.get("/parent/child/{child_id}/rewards", response_model=Reward)
+async def get_child_rewards_by_parent(
+    child_id: str,
+    parent_id: str = Depends(require_role(UserRole.PARENT)),
+    reward_repo: RewardRepository = Depends(get_reward_repository)
+):
+    """
+    Get rewards information for a specific child, verifying parent relationship.
+    Only accessible by parents.
+    """
+    try:
+        # Verify parent-child relationship
+        db = MongoDB.get_db()
+        child = await db["children"].find_one({
+            "child_id": child_id,
+            "parent_id": parent_id
+        })
+        
+        if not child:
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to access this child's information"
+            )
+            
+        reward = await reward_repo.get_reward(child_id)
+        if not reward:
+            # Create initial reward record if none exists
+            reward = Reward(child_id=child_id)
+            reward = await reward_repo.create_reward(reward)
+        return reward
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting rewards for child {child_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve rewards"
         ) 
