@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from app.db.mongo import MongoDB
 from app.models.story.story import Story, VocabularyWord
 
@@ -21,8 +21,26 @@ class StoryRepository:
 
     async def get_child_stories(self, child_id: str) -> List[Story]:
         """Get all stories for a specific child."""
-        stories = await self.stories_collection.find({"child_id": child_id}).to_list(length=None)
+        cursor = self.stories_collection.find({"child_id": child_id})
+        stories = await cursor.to_list(length=None)
         return [Story(**story) for story in stories]
+
+    async def get_child_stories_paginated(
+        self,
+        child_id: str,
+        skip: int = 0,
+        limit: int = 10
+    ) -> Tuple[List[Story], int]:
+        # Get total count
+        total = await self.stories_collection.count_documents({"child_id": child_id})
+        
+        # Get paginated stories
+        cursor = self.stories_collection.find(
+            {"child_id": child_id}
+        ).sort("created_at", -1).skip(skip).limit(limit)
+        
+        stories = await cursor.to_list(length=None)
+        return [Story(**story) for story in stories], total
 
     async def update_story(self, story_id: str, story: Story) -> Optional[Story]:
         """Update a story in the database."""
@@ -42,28 +60,42 @@ class StoryRepository:
 
     async def get_child_vocabulary_words(self, child_id: str) -> List[dict]:
         """Get all vocabulary words for a specific child with story titles."""
-        pipeline = [
-            {"$match": {"child_id": child_id}},
-            {
-                "$lookup": {
-                    "from": "stories",
-                    "localField": "story_id",
-                    "foreignField": "story_id",
-                    "as": "story"
-                }
-            },
-            {"$unwind": "$story"},
-            {
-                "$project": {
-                    "word": 1,
-                    "synonym": 1,
-                    "related_words": 1,
-                    "created_at": 1,
-                    "story_title": "$story.title"
-                }
-            },
-            {"$sort": {"created_at": -1}}  # Sort by newest first
-        ]
+        # Get vocabulary words from vocabulary_words collection
+        cursor = self.vocabulary_collection.find(
+            {"child_id": child_id}
+        ).sort("created_at", -1)
         
-        vocabulary_words = await self.vocabulary_collection.aggregate(pipeline).to_list(length=None)
-        return vocabulary_words 
+        vocabulary_words = await cursor.to_list(length=None)
+        
+        # Get story titles for each vocabulary word
+        for word in vocabulary_words:
+            story = await self.stories_collection.find_one(
+                {"story_id": word["story_id"]},
+                {"title": 1}
+            )
+            if story:
+                word["story_title"] = story["title"]
+            else:
+                word["story_title"] = "Unknown Story"
+            
+            # Ensure all required fields are present
+            word_dict = {
+                "word": word["word"],
+                "synonym": word["synonym"],
+                "meaning": word.get("meaning", ""),  # Default to empty string if missing
+                "related_words": word["related_words"],
+                "story_title": word["story_title"],
+                "created_at": word["created_at"]
+            }
+            word.clear()
+            word.update(word_dict)
+                
+        return vocabulary_words
+
+    async def delete_story(self, story_id: str, child_id: str) -> bool:
+        """Delete a story from the database if it belongs to the specified child."""
+        result = await self.stories_collection.delete_one({
+            "story_id": story_id,
+            "child_id": child_id
+        })
+        return result.deleted_count > 0 

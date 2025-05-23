@@ -47,6 +47,7 @@ import {EditChildModal} from "@/components/child-details/EditChildModal";
 import {ChildSettingsModal} from "@/components/child-details/ChildSettingsModal";
 import {StreakProgress} from "@/components/child-details/StreakProgress";
 import {StreakHeatmap} from "@/components/child-details/StreakHeatmap";
+import {CircularStatsGraph} from "@/components/child-details/CircularStatsGraph";
 
 // Mock data for demonstration
 const mockProgress = {
@@ -227,6 +228,7 @@ export default function ChildDetailsPage() {
 
 	const [rewards, setRewards] = useState({xp: 0, level: 0});
 	const [streakData, setStreakData] = useState<any>(null);
+	const [stats, setStats] = useState<any>(null);
 
 	useEffect(() => {
 		const fetchChildDetails = async () => {
@@ -266,6 +268,19 @@ export default function ChildDetailsPage() {
 
 		fetchChildDetails();
 	}, [params.id, router]);
+
+	useEffect(() => {
+		if (!child) return;
+		const fetchStats = async () => {
+			try {
+				const data = await childrenApi.getChildStats(child.child_id);
+				setStats(data);
+			} catch (e) {
+				// Optionally handle error
+			}
+		};
+		fetchStats();
+	}, [child]);
 
 	const handleEdit = () => setEditOpen(true);
 	const handleEditClose = () => setEditOpen(false);
@@ -400,12 +415,22 @@ export default function ChildDetailsPage() {
 			{/* Two-column layout below navbar */}
 			<div className='grid grid-cols-1 md:grid-cols-6 gap-8'>
 				{/* Left column: Streak Progress */}
-				<div className='md:col-span-2'>
+				<div className='md:col-span-2 flex flex-col gap-6'>
 					<StreakProgress streakData={streakData} />
+					{stats && (
+						<CircularStatsGraph
+							solved={stats.solved}
+							total={stats.total}
+							attempting={stats.attempting}
+							easy={stats.easy}
+							medium={stats.medium}
+							hard={stats.hard}
+						/>
+					)}
 				</div>
 				{/* Main content right */}
 				<div className='md:col-span-4 flex flex-col gap-8'>
-					<StoriesList stories={mockRecentActivities.map((activity) => ({title: activity.title, date: activity.date}))} />
+					<StoriesList />
 					<StreakHeatmap activityData={mockActivityData} />
 				</div>
 			</div>

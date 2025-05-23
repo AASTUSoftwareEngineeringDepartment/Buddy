@@ -1,34 +1,66 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.services.story_generation.story_service import StoryService
-from app.models.story.story import StoryRequest, StoryResponse, VocabularyResponse
-from app.api.v1.dependencies.auth import get_current_user
+from app.models.story.story import StoryResponse, VocabularyResponse, PaginatedStoryResponse, StoryUpdateRequest
+from app.api.v1.dependencies.auth import get_current_user, require_role
 from app.models.enums import UserRole
 from typing import List
+from app.db.mongo import MongoDB
+import logging
 
 router = APIRouter(prefix="/stories", tags=["stories"])
 
+logger = logging.getLogger(__name__)
+
 @router.post("/generate", response_model=StoryResponse)
 async def generate_story(
-    request: StoryRequest,
     current_user: tuple[str, UserRole] = Depends(get_current_user)
 ):
+    """
+    Generate a new story for the current child.
+    Only accessible by children.
+    """
     try:
         user_id, user_role = current_user
+        if user_role != UserRole.CHILD:
+            raise HTTPException(
+                status_code=403,
+                detail="Only children can generate stories"
+            )
+
         story_service = StoryService()
-        # If the user is a child, pass their ID to store the story
-        child_id = user_id if user_role == UserRole.CHILD else None
-        story = await story_service.generate_personalized_story(request, child_id)
-        return story
+        story = await story_service.generate_personalized_story(
+            user_id
+        )
+        
+        return StoryResponse(
+            story_id=story.story_id,
+            title=story.title,
+            story_body=story.content,
+            image_url=story.image_url
+        )
+    except ValueError as ve:
+        logger.error(f"Value error in story generation: {str(ve)}")
+        raise HTTPException(
+            status_code=404,
+            detail=str(ve)
+        )
     except Exception as e:
+        logger.error(f"Failed to generate story: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate story: {str(e)}"
         )
 
-@router.get("/my-stories", response_model=list[StoryResponse])
+@router.get("/my-stories", response_model=PaginatedStoryResponse)
 async def get_my_stories(
-    current_user: tuple[str, UserRole] = Depends(get_current_user)
+    current_user: tuple[str, UserRole] = Depends(get_current_user),
+    skip: int = Query(default=0, ge=0, description="Number of stories to skip"),
+    limit: int = Query(default=10, ge=1, le=50, description="Number of stories to return")
 ):
+    """
+    Get paginated stories for the current child.
+    Only accessible by children.
+    """
     try:
         user_id, user_role = current_user
         if user_role != UserRole.CHILD:
@@ -37,16 +69,29 @@ async def get_my_stories(
                 detail="Only children can access their stories"
             )
         story_service = StoryService()
-        stories = await story_service.story_repository.get_child_stories(user_id)
+        stories, total = await story_service.story_repository.get_child_stories_paginated(
+            user_id,
+            skip=skip,
+            limit=limit
+        )
+        
         # Map Story objects to StoryResponse objects
-        return [
+        story_responses = [
             StoryResponse(
+                story_id=story.story_id,
                 title=story.title,
                 story_body=story.content,  # Map content to story_body
                 image_url=story.image_url
             )
             for story in stories
         ]
+        
+        return PaginatedStoryResponse(
+            stories=story_responses,
+            total=total,
+            skip=skip,
+            limit=limit
+        )
     except HTTPException as he:
         raise he
     except Exception as e:
@@ -88,4 +133,222 @@ async def get_my_vocabulary(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve vocabulary words: {str(e)}"
+        )
+
+@router.get("/parent/child/{child_id}/stories", response_model=PaginatedStoryResponse)
+async def get_child_stories_by_parent(
+    child_id: str,
+    parent_id: str = Depends(require_role(UserRole.PARENT)),
+    skip: int = Query(default=0, ge=0, description="Number of stories to skip"),
+    limit: int = Query(default=10, ge=1, le=50, description="Number of stories to return")
+):
+    """
+    Get paginated stories for a specific child, verifying parent relationship.
+    Only accessible by parents.
+    """
+    try:
+        # Verify parent-child relationship
+        db = MongoDB.get_db()
+        child = await db["children"].find_one({
+            "child_id": child_id,
+            "parent_id": parent_id
+        })
+        
+        if not child:
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to access this child's information"
+            )
+            
+        story_service = StoryService()
+        stories, total = await story_service.story_repository.get_child_stories_paginated(
+            child_id,
+            skip=skip,
+            limit=limit
+        )
+        
+        # Map Story objects to StoryResponse objects
+        story_responses = [
+            StoryResponse(
+                story_id=story.story_id,
+                title=story.title,
+                story_body=story.content,  # Map content to story_body
+                image_url=story.image_url
+            )
+            for story in stories
+        ]
+        
+        return PaginatedStoryResponse(
+            stories=story_responses,
+            total=total,
+            skip=skip,
+            limit=limit
+        )
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve stories: {str(e)}"
+        )
+
+@router.put("/parent/story/update", response_model=StoryResponse)
+async def update_and_regenerate_story(
+    request: StoryUpdateRequest,
+    parent_id: str = Depends(require_role(UserRole.PARENT))
+):
+    """
+    Update a story with parent's comment and regenerate it.
+    Only accessible by parents.
+
+    Parameters:
+    - **parent_comment**: The parent's feedback or comment for the story
+    - **story_id**: The ID of the story to be updated
+    - **child_id**: The ID of the child who owns the story
+
+    Returns:
+    - **story_id**: The ID of the updated story
+    - **title**: The title of the updated story
+    - **story_body**: The content of the updated story
+    - **image_url**: Optional URL to the story's image
+
+    Raises:
+    - **404**: Story not found
+    - **403**: Not authorized to update this story
+    - **500**: Failed to update story
+    """
+    try:
+        story_service = StoryService()
+        
+        # Get the original story
+        story = await story_service.story_repository.get_story(request.story_id)
+        if not story:
+            raise HTTPException(
+                status_code=404,
+                detail="Story not found"
+            )
+            
+        # Verify parent-child relationship and get child info
+        db = MongoDB.get_db()
+        child = await db["children"].find_one({
+            "child_id": request.child_id,
+            "parent_id": parent_id
+        })
+        
+        if not child:
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to update this story"
+            )
+            
+        # Verify the story belongs to the specified child
+        if story.child_id != request.child_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Story does not belong to the specified child"
+            )
+            
+        # Generate new story
+        new_story = await story_service.generate_personalized_story(
+            request.child_id,
+            parent_comment=request.parent_comment,
+            original_story=story
+        )
+        
+        # Update the story in the database
+        updated_story = await story_service.story_repository.update_story(
+            request.story_id,
+            new_story
+        )
+        
+        if not updated_story:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to update story"
+            )
+            
+        return StoryResponse(
+            story_id=updated_story.story_id,
+            title=updated_story.title,
+            story_body=updated_story.content,
+            image_url=updated_story.image_url
+        )
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update story: {str(e)}"
+        )
+
+@router.delete("/parent/child/{child_id}/story/{story_id}")
+async def delete_child_story(
+    child_id: str,
+    story_id: str,
+    parent_id: str = Depends(require_role(UserRole.PARENT))
+):
+    """
+    Delete a story for a specific child, verifying parent relationship.
+    Only accessible by parents.
+
+    Parameters:
+    - **child_id**: The ID of the child who owns the story
+    - **story_id**: The ID of the story to be deleted
+
+    Returns:
+    - Success message if the story was deleted
+
+    Raises:
+    - **404**: Story not found
+    - **403**: Not authorized to delete this story
+    - **500**: Failed to delete story
+    """
+    try:
+        # Verify parent-child relationship
+        db = MongoDB.get_db()
+        child = await db["children"].find_one({
+            "child_id": child_id,
+            "parent_id": parent_id
+        })
+        
+        if not child:
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to delete this story"
+            )
+            
+        story_service = StoryService()
+        
+        # Get the story to verify it exists
+        story = await story_service.story_repository.get_story(story_id)
+        if not story:
+            raise HTTPException(
+                status_code=404,
+                detail="Story not found"
+            )
+            
+        # Verify the story belongs to the specified child
+        if story.child_id != child_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Story does not belong to the specified child"
+            )
+            
+        # Delete the story
+        deleted = await story_service.story_repository.delete_story(story_id, child_id)
+        if not deleted:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to delete story"
+            )
+            
+        return {"message": "Story deleted successfully"}
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete story: {str(e)}"
         ) 

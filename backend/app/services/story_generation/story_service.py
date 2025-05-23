@@ -2,11 +2,13 @@ import os
 import json
 import logging
 from typing import List, Dict, Optional
-from app.models.story.story import Story, StoryRequest, StoryResponse, VocabularyWord
+from app.models.story.story import Story, StoryResponse, VocabularyWord
 from app.utils.story_processing.pdf_processor import PDFProcessor
 from app.services.llm.llm_service import LLMService
 from app.services.image.image_service import ImageService
 from app.repositories.story_repository import StoryRepository
+from app.db.mongo import MongoDB
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -19,6 +21,7 @@ class StoryService:
         self.llm_service = LLMService()
         self.image_service = ImageService()
         self.story_repository = StoryRepository()
+        self.db = MongoDB.get_db()
 
     async def retrieve_relevant_stories(
         self,
@@ -65,15 +68,210 @@ class StoryService:
                 'relevance_score': 1
             }]
 
-    async def generate_personalized_story(self, request: StoryRequest, child_id: Optional[str] = None) -> StoryResponse:
+    async def generate_personalized_story(
+        self,
+        child_id: str,
+        parent_comment: Optional[str] = None,
+        original_story: Optional[Story] = None
+    ) -> Story:
+        """
+        Generate a personalized story for a child.
+        If parent_comment and original_story are provided, it will regenerate the story with the parent's feedback.
+        """
+        try:
+            # Get child's settings
+            child_settings = await self.db["settings"].find_one({
+                "child_id": child_id
+            })
+
+            # If settings don't exist, create default settings
+            if not child_settings:
+                logger.info(f"Creating default settings for child {child_id}")
+                default_settings = {
+                    "child_id": child_id,
+                    "preferences": ["animals", "nature", "games"],
+                    "themes": ["friendship", "adventure", "learning"],
+                    "moral_values": ["kindness", "courage", "honesty"],
+                    "favorite_animal": None,
+                    "favorite_character": None,
+                    "screen_time": 0,
+                    "created_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }
+                try:
+                    await self.db["settings"].insert_one(default_settings)
+                    child_settings = default_settings
+                    logger.info(f"Default settings created for child {child_id}")
+                except Exception as e:
+                    logger.error(f"Failed to create default settings: {str(e)}")
+                    raise ValueError(f"Failed to create default settings: {str(e)}")
+
+            # Get child's info
+            child = await self.db["children"].find_one({
+                "child_id": child_id
+            })
+
+            if not child:
+                raise ValueError("Child not found")
+
+            # Get child's name from first_name and last_name
+            child_name = f"{child.get('first_name', '')} {child.get('last_name', '')}".strip()
+            if not child_name:
+                child_name = child.get('nickname', 'the child')
+            logger.info(f"Using child name: {child_name}")
+
+            # Define the JSON schema for the story response
+            story_schema = {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "The title of the story"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "The main content of the story"
+                    },
+                    "image_url": {
+                        "type": "string",
+                        "description": "URL for the story's illustration (use an empty string if not available)"
+                    }
+                },
+                "required": ["title", "content"],
+                "additionalProperties": False
+            }
+
+            # Create system instruction
+            system_instruction = f"""You are a children's story generator for young Ethiopian children. 
+Your task is to create simple stories between 50-100 words that incorporate Ethiopian culture and values.
+
+Follow these rules:
+1. Keep the story between 50-100 words
+2. Use simple English words and short sentences
+3. Include clear moral lessons: {', '.join(child_settings.get('moral_values', []))}
+4. Make the story fun and engaging
+5. Use simple dialogue
+6. Focus on one main event or lesson
+7. Use words that a young child can understand
+8. Keep the story structure simple: beginning, middle, end
+9. Use repetition and simple patterns
+10. Include the child's name ({child_name}) and favorite things naturally
+11. Incorporate Ethiopian cultural elements
+12. Include themes: {', '.join(child_settings.get('themes', []))}
+13. Include preferences: {', '.join(child_settings.get('preferences', []))}
+
+IMPORTANT: Make sure to:
+- Keep the story between 50-100 words
+- Format the response as valid JSON
+- Close all JSON objects properly
+- Do not include any additional properties in the response
+- Ensure all required fields are present"""
+
+            # Prepare the prompt based on whether this is a new story or an update
+            if parent_comment and original_story:
+                prompt = f"""Original story: {original_story.content}
+Parent's comment: {parent_comment}
+Please regenerate this story incorporating the parent's feedback while maintaining the same themes and moral values."""
+            else:
+                prompt = f"""Create a story (50-100 words) for {child_name} that is:
+- Simple and easy to understand
+- Uses short sentences and simple words
+- Includes {child_name}'s favorite things: {', '.join(child_settings.get('preferences', []))}
+- Teaches about: {', '.join(child_settings.get('moral_values', []))}
+- Incorporates Ethiopian cultural elements
+- Includes themes: {', '.join(child_settings.get('themes', []))}
+
+Remember to:
+- Keep the story between 50-100 words
+- Format the response as valid JSON
+- Close all JSON objects properly
+- Do not include any additional properties
+- Ensure all required fields are present"""
+
+            # Generate story using LLM
+            story_data = await self.llm_service.generate_json_content(
+                prompt=f"{system_instruction}\n\n{prompt}",
+                json_schema=story_schema
+            )
+
+            # Create story object
+            story = Story(
+                title=story_data["title"],
+                content=story_data["content"],
+                age_range="4-8",  # Default age range since it's not in settings
+                themes=child_settings.get("themes", []),
+                moral_values=child_settings.get("moral_values", []),
+                image_url=story_data.get("image_url") or None,  # Set to None if not provided
+                child_id=child_id
+            )
+
+            # Store the story
+            stored_story = await self.story_repository.create_story(story)
+
+            # Store vocabulary words if present in the response
+            if "vocabulary_table" in story_data:
+                vocabulary_words = [
+                    VocabularyWord(
+                        word=vocab["word"],
+                        synonym=vocab["synonym"],
+                        meaning=vocab.get("meaning", ""),  # Handle optional meaning field
+                        related_words=vocab["related_words"],
+                        story_id=stored_story.story_id,
+                        child_id=child_id
+                    )
+                    for vocab in story_data["vocabulary_table"]
+                ]
+                await self.story_repository.create_vocabulary_words(vocabulary_words)
+
+            return stored_story
+
+        except ValueError as ve:
+            logger.error(f"Value error in story generation: {str(ve)}")
+            raise
+        except Exception as e:
+            logger.error(f"Error in story generation: {str(e)}")
+            raise ValueError(f"Failed to generate story: {str(e)}")
+
+    async def generate_personalized_story_using_rag(
+        self,
+        child_id: str,
+        parent_comment: Optional[str] = None,
+        original_story: Optional[Story] = None
+    ) -> Story:
         """Generate a personalized story using RAG."""
         try:
+            # Get child's settings
+            child_settings = await self.db["settings"].find_one({
+                "child_id": child_id
+            })
+
+            # If settings don't exist, create default settings
+            if not child_settings:
+                default_settings = {
+                    "child_id": child_id,
+                    "age_range": "4-8",
+                    "themes": ["friendship", "adventure", "learning"],
+                    "moral_values": ["kindness", "courage", "honesty"],
+                    "preferences": ["animals", "nature", "games"]
+                }
+                await self.db["settings"].insert_one(default_settings)
+                child_settings = default_settings
+
+            # Get child's info
+            child = await self.db["children"].find_one({
+                "child_id": child_id
+            })
+
+            if not child:
+                raise ValueError("Child not found")
+
             # Retrieve relevant stories
             relevant_stories = await self.retrieve_relevant_stories(
-                request.age,
-                request.preferences,
-                request.themes,
-                request.moral_values
+                int(child_settings.get("age_range", "4-8").split("-")[0]),
+                child_settings.get("preferences", []),
+                child_settings.get("themes", []),
+                child_settings.get("moral_values", [])
             )
 
             # Define the JSON schema for the story response
@@ -146,31 +344,20 @@ Follow these rules:
         * Help build vocabulary in different directions
         * Age-appropriate
 14. Make sure the vocabulary words are naturally integrated into the story
-15. Use Ethiopian names, places, and cultural references when appropriate
+15. Use Ethiopian names, places, and cultural references when appropriate"""
 
-Example vocabulary table format:
-[
-    {
-        "word": "brave",
-        "synonym": "courageous",
-        "related_words": ["mountain", "river", "forest"]  # Words from the story context, not related to bravery
-    },
-    {
-        "word": "adventure",
-        "synonym": "journey",
-        "related_words": ["friend", "map", "treasure"]  # Words from the story context, not related to adventure
-    }
-]"""
-
-            # Create the query
-            query = f"""Create a story (50-100 words) for a {request.age}-year-old Ethiopian child named {request.child_name}.
+            # Prepare the prompt based on whether this is a new story or an update
+            if parent_comment and original_story:
+                prompt = f"""Original story: {original_story.content}
+Parent's comment: {parent_comment}
+Please regenerate this story incorporating the parent's feedback while maintaining the same themes and moral values."""
+            else:
+                prompt = f"""Create a story (50-100 words) for a {child_settings.get('age_range', '4-8')}-year-old Ethiopian child named {child['name']}.
 The story should be:
 - Simple and easy to understand
 - Use short sentences and simple words
-- Include {request.child_name}'s favorite things: {', '.join(request.preferences)}
-- Teach about: {', '.join(request.moral_values)}
-- Include their favorite animal: {request.favorite_animal or 'an animal'}
-- Feature their favorite character: {request.favorite_character or 'a friendly character'}
+- Include {child['name']}'s favorite things: {', '.join(child_settings.get('preferences', []))}
+- Teach about: {', '.join(child_settings.get('moral_values', []))}
 - Incorporate Ethiopian cultural elements
 - Include 3-5 key vocabulary words in a table format with:
   * One clear synonym
@@ -183,10 +370,9 @@ EXAMPLE STORIES FOR REFERENCE:
 
             try:
                 # Generate the story using the new structured output method
-                story_data = await self.llm_service.generate_content_with_structured_schema(
-                    system_instruction=system_instruction,
-                    query=query,
-                    response_schema=story_schema
+                story_data = await self.llm_service.generate_json_content(
+                    prompt=f"{system_instruction}\n\n{prompt}",
+                    json_schema=story_schema
                 )
                 
                 logger.info(f"Generated story data: {story_data}")
@@ -196,61 +382,53 @@ EXAMPLE STORIES FOR REFERENCE:
                 if word_count < 50 or word_count > 100:
                     logger.warning(f"Story length ({word_count} words) is not within 50-100 words, generating a new version")
                     # Generate a new version with specific length requirements
-                    story_data = await self.llm_service.generate_content_with_structured_schema(
-                        system_instruction=system_instruction + f"\nIMPORTANT: The story MUST be between 50-100 words. Current length: {word_count} words.",
-                        query=query + f"\nIMPORTANT: Make the story between 50-100 words. Current length: {word_count} words.",
-                        response_schema=story_schema
+                    story_data = await self.llm_service.generate_json_content(
+                        prompt=f"{system_instruction}\nIMPORTANT: The story MUST be between 50-100 words. Current length: {word_count} words.\n\n{prompt}",
+                        json_schema=story_schema
                     )
 
                 # Generate image for the story
                 image_url = await self.image_service.generate_story_image({
-                    "child_name": request.child_name,
-                    "age": request.age,
-                    "preferences": request.preferences,
-                    "themes": request.themes,
-                    "moral_values": request.moral_values,
-                    "favorite_animal": request.favorite_animal,
-                    "favorite_character": request.favorite_character,
+                    "child_name": child["name"],
+                    "age": int(child_settings.get("age_range", "4-8").split("-")[0]),
+                    "preferences": child_settings.get("preferences", []),
+                    "themes": child_settings.get("themes", []),
+                    "moral_values": child_settings.get("moral_values", []),
                     "story_title": story_data.get("title", "Untitled"),
                     "story_summary": story_data.get("story_body", "")[:200]  # Send first 200 chars as summary
                 })
 
-                # Build the response with all required fields
-                story_response = StoryResponse(
+                # Create story object
+                story = Story(
                     title=story_data.get("title", "Untitled"),
-                    story_body=story_data.get("story_body", ""),
-                    image_url=image_url,
-                    vocabulary_table=story_data.get("vocabulary_table", [])
+                    content=story_data.get("story_body", ""),
+                    age_range=child_settings.get("age_range", "4-8"),
+                    themes=child_settings.get("themes", []),
+                    moral_values=child_settings.get("moral_values", []),
+                    image_url=image_url or None,  # Set to None if not provided
+                    child_id=child_id
                 )
 
-                # If child_id is provided, store the story in the database
-                if child_id:
-                    # Create and store the story
-                    story = Story(
-                        title=story_response.title,
-                        content=story_response.story_body,
-                        age_range=f"{request.age}-{request.age + 2}",
-                        themes=request.themes,
-                        moral_values=request.moral_values,
-                        image_url=story_response.image_url,
-                        child_id=child_id
-                    )
-                    await self.story_repository.create_story(story)
+                # Store the story
+                stored_story = await self.story_repository.create_story(story)
 
-                    # Create and store vocabulary words
+                # Store vocabulary words if present in the response
+                if "vocabulary_table" in story_data:
                     vocabulary_words = [
                         VocabularyWord(
                             word=vocab["word"],
                             synonym=vocab["synonym"],
+                            meaning=vocab.get("meaning", ""),  # Handle optional meaning field
                             related_words=vocab["related_words"],
-                            story_id=story.story_id,
+                            story_id=stored_story.story_id,
                             child_id=child_id
                         )
-                        for vocab in story_data.get("vocabulary_table", [])
+                        for vocab in story_data["vocabulary_table"]
                     ]
                     await self.story_repository.create_vocabulary_words(vocabulary_words)
 
-                return story_response
+                return stored_story
+
             except ValueError as ve:
                 logger.error(f"Validation error in story generation: {str(ve)}")
                 raise
@@ -260,21 +438,4 @@ EXAMPLE STORIES FOR REFERENCE:
 
         except Exception as e:
             logger.error(f"Error in story generation: {str(e)}")
-            # Return a more detailed default story if generation fails
-            return StoryResponse(
-                title=f"{request.child_name}'s Magical Adventure",
-                story_body=f"""
-                Once upon a time, in a land filled with {', '.join(request.preferences)}, there lived a brave and kind child named {request.child_name}. 
-                
-                One sunny morning, {request.child_name} woke up to find a magical map on their bedside table. The map showed a path through the Enchanted Forest, where a great adventure awaited. {request.child_name} packed a small bag with their favorite things and set off on their journey.
-                
-                As they walked through the forest, they met many interesting creatures. There was a wise old owl who taught them about {request.moral_values[0]}, and a playful squirrel who showed them the importance of {request.moral_values[1]}. Along the way, they helped a lost {request.favorite_animal or 'rabbit'} find its way home, learning about friendship and courage.
-                
-                The journey wasn't always easy. {request.child_name} faced challenges that tested their bravery and kindness. But with each challenge, they grew stronger and wiser. They learned that true strength comes from helping others and staying true to one's values.
-                
-                Finally, after many adventures, {request.child_name} reached the end of their journey. They had made new friends, learned important lessons about {', '.join(request.moral_values)}, and discovered the magic that comes from being kind and brave. As they returned home, they knew this was just the beginning of many more adventures to come.
-                
-                The end.
-                """,
-                image_url=None
-            ) 
+            raise 

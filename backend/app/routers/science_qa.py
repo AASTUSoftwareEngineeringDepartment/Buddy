@@ -639,4 +639,12 @@ async def get_child_rewards_by_parent(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve rewards"
-        ) 
+        )
+
+@router.get("/stats/{child_id}")
+async def get_child_stats(child_id: str, question_repo: ScienceQuestionRepository = Depends(get_question_repository)):
+    """
+    Get science QA stats for a child (for CircularStatsGraphProps).
+    """
+    stats = await question_repo.get_child_stats(child_id)
+    return stats 

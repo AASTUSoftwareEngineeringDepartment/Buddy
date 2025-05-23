@@ -6,6 +6,7 @@ from uuid import uuid4
 class VocabularyWord(BaseModel):
     word: str
     synonym: str
+    meaning: str = Field(description="A short, simple explanation of the word's meaning")
     related_words: List[str] = Field(description="Three words that are contextually relevant to the story but NOT related to the main word")
     story_id: str
     child_id: str
@@ -23,16 +24,8 @@ class Story(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-class StoryRequest(BaseModel):
-    child_name: str
-    age: int
-    preferences: List[str]
-    themes: List[str]
-    moral_values: List[str]
-    favorite_animal: Optional[str] = None
-    favorite_character: Optional[str] = None
-
 class StoryResponse(BaseModel):
+    story_id: str
     title: str
     story_body: str
     image_url: Optional[str] = None
@@ -40,6 +33,18 @@ class StoryResponse(BaseModel):
 class VocabularyResponse(BaseModel):
     word: str
     synonym: str
+    meaning: str
     related_words: List[str]
     story_title: str
-    created_at: datetime 
+    created_at: datetime
+
+class PaginatedStoryResponse(BaseModel):
+    stories: List[StoryResponse]
+    total: int
+    skip: int
+    limit: int
+
+class StoryUpdateRequest(BaseModel):
+    parent_comment: str
+    story_id: str
+    child_id: str 

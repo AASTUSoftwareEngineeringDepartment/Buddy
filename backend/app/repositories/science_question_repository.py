@@ -182,4 +182,30 @@ class ScienceQuestionRepository:
             "child_id": child_id,
             "scored": True
         })
-        return count 
+        return count
+
+    async def get_child_stats(self, child_id: str) -> dict:
+        """Return stats for a child matching CircularStatsGraphProps interface."""
+        # Total questions
+        total = await self.collection.count_documents({"child_id": child_id})
+        # Solved questions (scored True)
+        solved = await self.collection.count_documents({"child_id": child_id, "scored": True})
+        # Attempting questions (not solved or not scored True)
+        attempting = await self.collection.count_documents({"child_id": child_id, "solved": False})
+        # Easy
+        easy_total = await self.collection.count_documents({"child_id": child_id, "difficulty_level": "easy"})
+        easy_solved = await self.collection.count_documents({"child_id": child_id, "difficulty_level": "easy", "scored": True})
+        # Medium
+        medium_total = await self.collection.count_documents({"child_id": child_id, "difficulty_level": "medium"})
+        medium_solved = await self.collection.count_documents({"child_id": child_id, "difficulty_level": "medium", "scored": True})
+        # Hard
+        hard_total = await self.collection.count_documents({"child_id": child_id, "difficulty_level": "hard"})
+        hard_solved = await self.collection.count_documents({"child_id": child_id, "difficulty_level": "hard", "scored": True})
+        return {
+            "solved": solved,
+            "total": total,
+            "attempting": attempting,
+            "easy": {"solved": easy_solved, "total": easy_total},
+            "medium": {"solved": medium_solved, "total": medium_total},
+            "hard": {"solved": hard_solved, "total": hard_total},
+        } 
