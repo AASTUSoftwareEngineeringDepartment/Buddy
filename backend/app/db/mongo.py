@@ -5,6 +5,11 @@ from bson import ObjectId
 settings = get_settings()
 
 
+def get_database():
+    """Get the database instance."""
+    return MongoDB.get_db()
+
+
 class MongoDB:
     client: AsyncIOMotorClient = None
     db = None

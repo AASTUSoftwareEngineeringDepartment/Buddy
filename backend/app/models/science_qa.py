@@ -175,6 +175,7 @@ class ScienceQuestion(BaseModel):
     question: str
     options: List[str]  # List of multiple choice options
     correct_option_index: int  # Index of the correct answer in options list
+    explanation: str = ""  # Short explanation of why the answer is correct, default to empty string
     difficulty_level: str  # "easy", "medium", "hard"
     age_range: str  # "4-6", "6-8"
     topic: str
@@ -228,6 +229,12 @@ class QuestionGenerationRequest(BaseModel):
             return "7-9"
         else:
             return "10-12"
+
+class PaginatedQuestionResponse(BaseModel):
+    questions: List[ScienceQuestion]
+    total: int
+    skip: int
+    limit: int
 
 class QuestionGenerationResponse(BaseModel):
     questions: List[ScienceQuestion]

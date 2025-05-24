@@ -69,11 +69,23 @@ class ScienceQuestionRepository:
         updated_question = await self.collection.find_one({"question_id": question_id})
         return is_correct, ScienceQuestion(**updated_question)
 
-    async def get_questions_by_child_id(self, child_id: str) -> List[ScienceQuestion]:
-        """Get all questions for a specific child."""
-        cursor = self.collection.find({"child_id": child_id})
+    async def get_questions_by_child_id(
+        self,
+        child_id: str,
+        skip: int = 0,
+        limit: int = 10
+    ) -> Tuple[List[ScienceQuestion], int]:
+        """Get paginated questions for a specific child."""
+        # Get total count
+        total = await self.collection.count_documents({"child_id": child_id})
+        
+        # Get paginated questions
+        cursor = self.collection.find(
+            {"child_id": child_id}
+        ).sort("created_at", -1).skip(skip).limit(limit)
+        
         questions = await cursor.to_list(length=None)
-        return [ScienceQuestion(**question) for question in questions]
+        return [ScienceQuestion(**question) for question in questions], total
 
     async def get_question_by_id(self, question_id: str) -> Optional[ScienceQuestion]:
         """Get a specific question by ID."""
@@ -89,36 +101,63 @@ class ScienceQuestionRepository:
         questions = await cursor.to_list(length=None)
         return [ScienceQuestion(**question) for question in questions]
 
-    async def get_questions_by_topic(self, child_id: str, topic: str) -> List[ScienceQuestion]:
-        """Get questions for a child by topic."""
-        cursor = self.collection.find({
+    async def get_questions_by_topic(
+        self,
+        child_id: str,
+        topic: str,
+        skip: int = 0,
+        limit: int = 10
+    ) -> Tuple[List[ScienceQuestion], int]:
+        """Get paginated questions for a child by topic."""
+        # Get total count
+        total = await self.collection.count_documents({
             "child_id": child_id,
             "topic": topic
         })
         
+        # Get paginated questions
+        cursor = self.collection.find({
+            "child_id": child_id,
+            "topic": topic
+        }).sort("created_at", -1).skip(skip).limit(limit)
+        
         questions = await cursor.to_list(length=None)
-        return [ScienceQuestion(**question) for question in questions]
+        return [ScienceQuestion(**question) for question in questions], total
 
-    async def get_questions_by_parent_id(self, parent_id: str, limit: int = 10) -> List[ScienceQuestion]:
-        """Get recent questions for all children of a parent."""
+    async def get_questions_by_parent_id(
+        self,
+        parent_id: str,
+        skip: int = 0,
+        limit: int = 10
+    ) -> Tuple[List[ScienceQuestion], int]:
+        """Get paginated questions for all children of a parent."""
         # First get all children of the parent
         children_collection = self.db["children"]
         children = await children_collection.find({"parent_id": parent_id}).to_list(length=None)
         child_ids = [child["child_id"] for child in children]
         
         if not child_ids:
-            return []
+            return [], 0
             
+        # Get total count
+        total = await self.collection.count_documents({"child_id": {"$in": child_ids}})
+        
         # Then get questions for all children
         cursor = self.collection.find(
             {"child_id": {"$in": child_ids}}
-        ).sort("created_at", -1).limit(limit)
+        ).sort("created_at", -1).skip(skip).limit(limit)
         
         questions = await cursor.to_list(length=None)
-        return [ScienceQuestion(**question) for question in questions]
+        return [ScienceQuestion(**question) for question in questions], total
 
-    async def get_child_questions_by_parent(self, parent_id: str, child_id: str, limit: int = 10) -> List[ScienceQuestion]:
-        """Get questions for a specific child, verifying parent relationship."""
+    async def get_child_questions_by_parent(
+        self,
+        parent_id: str,
+        child_id: str,
+        skip: int = 0,
+        limit: int = 10
+    ) -> Tuple[List[ScienceQuestion], int]:
+        """Get paginated questions for a specific child, verifying parent relationship."""
         # First verify that the child belongs to the parent
         children_collection = self.db["children"]
         child = await children_collection.find_one({
@@ -127,15 +166,18 @@ class ScienceQuestionRepository:
         })
         
         if not child:
-            return []
+            return [], 0
             
+        # Get total count
+        total = await self.collection.count_documents({"child_id": child_id})
+        
         # Then get questions for the child
         cursor = self.collection.find(
             {"child_id": child_id}
-        ).sort("created_at", -1).limit(limit)
+        ).sort("created_at", -1).skip(skip).limit(limit)
         
         questions = await cursor.to_list(length=None)
-        return [ScienceQuestion(**question) for question in questions]
+        return [ScienceQuestion(**question) for question in questions], total
 
     async def get_random_unsolved_question(self, child_id: str) -> Optional[ScienceQuestion]:
         """Get a random unsolved or incorrectly answered question for a child."""

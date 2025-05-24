@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Query
 from app.models.science_qa import (
     QuestionGenerationRequest, 
     QuestionGenerationResponse, 
@@ -12,7 +12,8 @@ from app.models.science_qa import (
     StreakResponse,
     Achievement,
     ACHIEVEMENTS,
-    Reward
+    Reward,
+    PaginatedQuestionResponse
 )
 from app.models.user import Child
 from app.services.vector_store import VectorStore
@@ -23,7 +24,7 @@ from app.repositories.achievement_repository import AchievementRepository
 from app.repositories.reward_repository import RewardRepository
 from app.api.v1.dependencies.auth import get_current_user, require_role
 from app.models.enums import UserRole
-from app.db.mongo import MongoDB
+from app.db.mongo import MongoDB, get_database
 from typing import List, Optional
 import os
 import json
@@ -31,6 +32,7 @@ import logging
 from dotenv import load_dotenv
 import random
 from fastapi import status
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 load_dotenv()
 
@@ -87,9 +89,13 @@ def get_question_schema():
                 "description": "Index of the correct answer (0-3)",
                 "minimum": 0,
                 "maximum": 3
+            },
+            "explanation": {
+                "type": "string",
+                "description": "A short, simple explanation of why the answer is correct"
             }
         },
-        "required": ["question", "options", "correct_option_index"],
+        "required": ["question", "options", "correct_option_index", "explanation"],
         "additionalProperties": False
     }
 
@@ -107,11 +113,13 @@ Follow these rules:
    - Three plausible but incorrect answers
    - All options should be similar in length
    - Avoid obviously wrong answers
-6. Format the response as JSON with 'question', 'options', and 'correct_option_index' fields
+6. Format the response as JSON with 'question', 'options', 'correct_option_index', and 'explanation' fields
 7. Keep the answer concise but informative
 8. Use examples that children can relate to
 9. Avoid complex scientific jargon
 10. Make it fun and interesting
+11. Provide a short, simple explanation of why the correct answer is right
+12. Make the explanation age-appropriate and easy to understand
 
 Example response format:
 {{
@@ -122,7 +130,8 @@ Example response format:
         "New clothes",
         "A cozy bed"
     ],
-    "correct_option_index": 0
+    "correct_option_index": 0,
+    "explanation": "Plants need sunlight to make food and water to stay healthy, just like we need food and water to grow!"
 }}"""
 
 @router.post("/process-pdf", response_model=PDFProcessingResponse)
@@ -232,6 +241,7 @@ The question should be:
             question=qa_data["question"],
             options=qa_data["options"],
             correct_option_index=qa_data["correct_option_index"],
+            explanation=qa_data["explanation"],
             difficulty_level=difficulty_level,
             age_range=age_range,
             topic=request.topic or "general",
@@ -255,25 +265,35 @@ The question should be:
             detail=f"Failed to generate question: {str(e)}"
         )
 
-@router.get("/questions", response_model=List[ScienceQuestion])
+@router.get("/questions", response_model=PaginatedQuestionResponse)
 async def get_child_questions(
     child_id: str = Depends(require_role(UserRole.CHILD)),
     topic: Optional[str] = None,
-    limit: int = 10
-) -> List[ScienceQuestion]:
-    """Get questions for the current child."""
+    skip: int = Query(default=0, ge=0, description="Number of questions to skip"),
+    limit: int = Query(default=10, ge=1, le=50, description="Number of questions to return")
+) -> PaginatedQuestionResponse:
+    """Get paginated questions for the current child."""
     try:
         if topic:
-            questions = await question_repository.get_questions_by_topic(
+            questions, total = await question_repository.get_questions_by_topic(
                 child_id,
-                topic
+                topic,
+                skip=skip,
+                limit=limit
             )
         else:
-            questions = await question_repository.get_recent_questions(
+            questions, total = await question_repository.get_questions_by_child_id(
                 child_id,
-                limit
+                skip=skip,
+                limit=limit
             )
-        return questions
+            
+        return PaginatedQuestionResponse(
+            questions=questions,
+            total=total,
+            skip=skip,
+            limit=limit
+        )
     except Exception as e:
         logger.error(f"Error retrieving questions: {str(e)}")
         raise HTTPException(
@@ -281,45 +301,40 @@ async def get_child_questions(
             detail=f"Failed to retrieve questions: {str(e)}"
         )
 
-@router.get("/parent/questions", response_model=List[ScienceQuestion])
+@router.get("/parent/questions", response_model=PaginatedQuestionResponse)
 async def get_parent_questions(
     parent_id: str = Depends(require_role(UserRole.PARENT)),
-    limit: int = 10
-) -> List[ScienceQuestion]:
-    """Get questions for all children of the current parent."""
-    try:
-        questions = await question_repository.get_questions_by_parent_id(
-            parent_id,
-            limit
-        )
-        return questions
-    except Exception as e:
-        logger.error(f"Error retrieving parent questions: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve questions: {str(e)}"
-        )
+    skip: int = Query(default=0, ge=0, description="Number of questions to skip"),
+    limit: int = Query(default=10, ge=1, le=50, description="Number of questions to return"),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Get paginated questions for all children of a parent."""
+    repository = ScienceQuestionRepository(db)
+    questions, total = await repository.get_questions_by_parent_id(parent_id, skip, limit)
+    return PaginatedQuestionResponse(
+        questions=questions,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
-@router.get("/parent/child/{child_id}/questions", response_model=List[ScienceQuestion])
-async def get_child_questions_by_parent(
+@router.get("/parent/child/{child_id}/questions", response_model=PaginatedQuestionResponse)
+async def get_parent_child_questions(
     child_id: str,
     parent_id: str = Depends(require_role(UserRole.PARENT)),
-    limit: int = 10
-) -> List[ScienceQuestion]:
-    """Get questions for a specific child, verifying parent relationship."""
-    try:
-        questions = await question_repository.get_child_questions_by_parent(
-            parent_id,
-            child_id,
-            limit
-        )
-        return questions
-    except Exception as e:
-        logger.error(f"Error retrieving child questions: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve questions: {str(e)}"
-        )
+    skip: int = Query(default=0, ge=0, description="Number of questions to skip"),
+    limit: int = Query(default=10, ge=1, le=50, description="Number of questions to return"),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Get paginated questions for a specific child, verifying parent relationship."""
+    repository = ScienceQuestionRepository(db)
+    questions, total = await repository.get_child_questions_by_parent(parent_id, child_id, skip, limit)
+    return PaginatedQuestionResponse(
+        questions=questions,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
 @router.post("/answer", response_model=AnswerQuestionResponse)
 async def answer_question(

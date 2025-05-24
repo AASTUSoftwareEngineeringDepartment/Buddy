@@ -50,12 +50,12 @@ export const childrenApi = {
 	},
 
 	getChildStreak: async (child_id: string) => {
-		const response = await api.get(`/science/parent/child/${child_id}/streak`);
+		const response = await api.get(`/api/v1/science/parent/child/${child_id}/streak`);
 		return response.data;
 	},
 
 	getChildRewards: async (child_id: string) => {
-		const response = await api.get(`/science/parent/child/${child_id}/rewards`);
+		const response = await api.get(`/api/v1/science/parent/child/${child_id}/rewards`);
 		return response.data;
 	},
 
@@ -76,12 +76,12 @@ export const childrenApi = {
 	},
 
 	getChildStats: async (child_id: string) => {
-		const response = await api.get(`/science/stats/${child_id}`);
+		const response = await api.get(`/api/v1/science/stats/${child_id}`);
 		return response.data;
 	},
 
 	getChildQuestions: async (child_id: string, limit: number = 10) => {
-		const response = await api.get(`/science/parent/child/${child_id}/questions`, {params: {limit}});
+		const response = await api.get(`/api/v1/science/parent/child/${child_id}/questions`, {params: {limit}});
 		return response.data;
 	},
 };
