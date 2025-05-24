@@ -1,7 +1,7 @@
 "use client";
 import {useState} from "react";
 import Image from "next/image";
-import Link from 'next/link';
+import Link from "next/link";
 import {
 	Menu,
 	X,
@@ -197,7 +197,7 @@ export default function Home() {
 							</p>
 
 							<div className='flex flex-col sm:flex-row gap-4 mb-12'>
-								<Link href="/login">
+								<Link href='/login'>
 									<Button className='group bg-[#344e41] text-white hover:bg-[#344e41]/90 px-8 py-6 text-lg rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-xl'>
 										Get Started
 										<ArrowRight className='ml-2 w-5 h-5 transform transition-transform group-hover:translate-x-1' />
@@ -345,7 +345,7 @@ export default function Home() {
 
 					{/* CTA Button */}
 					<div className='mt-16 text-center'>
-						<Link href="/login">
+						<Link href='/login'>
 							<Button className='group bg-[#344e41] text-white hover:bg-[#344e41]/90 px-8 py-6 text-lg rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-xl'>
 								Get Started Now
 								<ArrowRight className='ml-2 w-5 h-5 transform transition-transform group-hover:translate-x-1' />
@@ -522,7 +522,7 @@ export default function Home() {
 
 						{/* CTA Button */}
 						<div className='flex justify-center mb-12'>
-							<Link href="/login">
+							<Link href='/login'>
 								<Button className='group bg-white text-[#344e41] hover:bg-white/90 px-8 py-6 text-lg rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-xl'>
 									Get Started Free
 									<ArrowRight className='ml-2 w-5 h-5 transform transition-transform group-hover:translate-x-1' />
