@@ -309,14 +309,38 @@ async def get_parent_questions(
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Get paginated questions for all children of a parent."""
-    repository = ScienceQuestionRepository(db)
-    questions, total = await repository.get_questions_by_parent_id(parent_id, skip, limit)
-    return PaginatedQuestionResponse(
-        questions=questions,
-        total=total,
-        skip=skip,
-        limit=limit
-    )
+    try:
+        # First get all children of the parent
+        children = await db["children"].find({"parent_id": parent_id}).to_list(length=None)
+        if not children:
+            return PaginatedQuestionResponse(questions=[], total=0, skip=skip, limit=limit)
+            
+        child_ids = [child["child_id"] for child in children]
+        
+        # Get questions for all children
+        repository = ScienceQuestionRepository(db)
+        questions, total = await repository.get_questions_by_parent_id(parent_id, skip, limit)
+        
+        # Add child information to each question
+        for question in questions:
+            child = next((c for c in children if c["child_id"] == question.child_id), None)
+            if child:
+                question.child_name = f"{child.get('first_name', '')} {child.get('last_name', '')}".strip()
+                if not question.child_name:
+                    question.child_name = child.get('nickname', 'Unknown Child')
+        
+        return PaginatedQuestionResponse(
+            questions=questions,
+            total=total,
+            skip=skip,
+            limit=limit
+        )
+    except Exception as e:
+        logger.error(f"Error retrieving parent questions: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve questions: {str(e)}"
+        )
 
 @router.get("/parent/child/{child_id}/questions", response_model=PaginatedQuestionResponse)
 async def get_parent_child_questions(
@@ -327,26 +351,55 @@ async def get_parent_child_questions(
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Get paginated questions for a specific child, verifying parent relationship."""
-    repository = ScienceQuestionRepository(db)
-    questions, total = await repository.get_child_questions_by_parent(parent_id, child_id, skip, limit)
-    return PaginatedQuestionResponse(
-        questions=questions,
-        total=total,
-        skip=skip,
-        limit=limit
-    )
+    try:
+        # Verify parent-child relationship
+        child = await db["children"].find_one({
+            "child_id": child_id,
+            "parent_id": parent_id
+        })
+        
+        if not child:
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to access this child's questions"
+            )
+            
+        repository = ScienceQuestionRepository(db)
+        questions, total = await repository.get_child_questions_by_parent(parent_id, child_id, skip, limit)
+        
+        # Add child information to each question
+        for question in questions:
+            question.child_name = f"{child.get('first_name', '')} {child.get('last_name', '')}".strip()
+            if not question.child_name:
+                question.child_name = child.get('nickname', 'Unknown Child')
+        
+        return PaginatedQuestionResponse(
+            questions=questions,
+            total=total,
+            skip=skip,
+            limit=limit
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving child questions: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve questions: {str(e)}"
+        )
 
 @router.post("/answer", response_model=AnswerQuestionResponse)
 async def answer_question(
     request: AnswerQuestionRequest,
-    child_id: str = Depends(require_role(UserRole.CHILD))
+    child_id: str = Depends(require_role(UserRole.CHILD)),
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """
     Answer a science question and get feedback.
     Only accessible by children.
     """
     try:
-        repository = ScienceQuestionRepository()
+        repository = ScienceQuestionRepository(db)
         achievement_repo = AchievementRepository()
         reward_repo = RewardRepository()
         

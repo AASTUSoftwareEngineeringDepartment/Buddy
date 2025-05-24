@@ -233,6 +233,9 @@ export default function ChildDetailsPage() {
 	const [streakData, setStreakData] = useState<any>(null);
 	const [stats, setStats] = useState<any>(null);
 	const [questions, setQuestions] = useState<any[]>([]);
+	const [questionsTotal, setQuestionsTotal] = useState<number>(0);
+	const [questionsPage, setQuestionsPage] = useState<number>(0);
+	const questionsLimit = 5;
 
 	useEffect(() => {
 		const fetchChildDetails = async () => {
@@ -290,14 +293,15 @@ export default function ChildDetailsPage() {
 		if (!child) return;
 		const fetchQuestions = async () => {
 			try {
-				const data = await childrenApi.getChildQuestions(child.child_id, 10);
-				setQuestions(data);
+				const {questions, total} = await childrenApi.getChildQuestions(child.child_id, questionsLimit, questionsPage * questionsLimit);
+				setQuestions(questions);
+				setQuestionsTotal(total ?? 0);
 			} catch (e) {
 				// Optionally handle error
 			}
 		};
 		fetchQuestions();
-	}, [child]);
+	}, [child, questionsPage]);
 
 	const handleEdit = () => setEditOpen(true);
 	const handleEditClose = () => setEditOpen(false);
@@ -395,6 +399,8 @@ export default function ChildDetailsPage() {
 		return null;
 	}
 
+	console.log(questions);
+
 	return (
 		<div className='px-2 md:px-8 py-8 space-y-8'>
 			<ChildDetailsNavbar
@@ -449,9 +455,18 @@ export default function ChildDetailsPage() {
 				<div className='md:col-span-4 flex flex-col gap-8'>
 					<StoriesList />
 					<StreakHeatmap activityData={mockActivityData} />
-					{questions.length > 0 && <QuestionsAccordion questions={questions} />}
 				</div>
 			</div>
+			{/* Full width questions accordion below the grid */}
+			{questions.length > 0 && (
+				<QuestionsAccordion
+					questions={questions}
+					page={questionsPage}
+					limit={questionsLimit}
+					total={questionsTotal || questions.length}
+					onPageChange={setQuestionsPage}
+				/>
+			)}
 		</div>
 	);
 }

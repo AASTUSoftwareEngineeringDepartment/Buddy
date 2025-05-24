@@ -181,6 +181,7 @@ class ScienceQuestion(BaseModel):
     topic: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     child_id: Optional[str] = None  # ID of the child who received this question
+    child_name: Optional[str] = None  # Name of the child (for parent views)
     solved: bool = False  # Whether the question has been answered
     selected_answer: Optional[int] = None  # The answer selected by the child
     scored: Optional[bool] = None  # Whether the selected answer was correct

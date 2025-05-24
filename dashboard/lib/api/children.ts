@@ -80,8 +80,8 @@ export const childrenApi = {
 		return response.data;
 	},
 
-	getChildQuestions: async (child_id: string, limit: number = 10) => {
-		const response = await api.get(`/api/v1/science/parent/child/${child_id}/questions`, {params: {limit}});
+	getChildQuestions: async (child_id: string, limit: number = 5, skip: number = 0) => {
+		const response = await api.get(`/api/v1/science/parent/child/${child_id}/questions`, {params: {skip, limit}});
 		return response.data;
 	},
 };

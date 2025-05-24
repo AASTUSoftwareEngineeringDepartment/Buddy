@@ -4,8 +4,8 @@ from app.db.mongo import MongoDB
 from datetime import datetime
 
 class ScienceQuestionRepository:
-    def __init__(self):
-        self._db = None
+    def __init__(self, db=None):
+        self._db = db
         self._collection = None
 
     @property
