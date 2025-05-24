@@ -14,7 +14,7 @@ export function NewSidebar() {
 	const {user} = useAuth();
 
 	return (
-		<aside className='flex flex-col h-screen w-72 bg-white border-r px-6 py-6 justify-between'>
+		<aside className='fixed top-0 left-0 h-screen w-72 bg-white border-r px-6 py-6 justify-between flex flex-col z-30'>
 			{/* Top: Logo and Main Nav */}
 			<div>
 				{/* Logo */}
