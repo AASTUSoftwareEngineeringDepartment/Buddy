@@ -79,4 +79,9 @@ export const childrenApi = {
 		const response = await api.get(`/science/stats/${child_id}`);
 		return response.data;
 	},
+
+	getChildQuestions: async (child_id: string, limit: number = 10) => {
+		const response = await api.get(`/science/parent/child/${child_id}/questions`, {params: {limit}});
+		return response.data;
+	},
 };

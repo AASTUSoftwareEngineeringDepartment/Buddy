@@ -14,7 +14,7 @@ interface CircularStatsGraphProps {
 export function CircularStatsGraph({solved, total, attempting, easy, medium, hard}: CircularStatsGraphProps) {
 	const percent = (solved / total) * 100;
 	return (
-		<div className='rounded-2xl bg-white/60 backdrop-blur-md shadow-lg border border-white/40 p-6 w-full max-w-md mx-auto flex flex-col gap-4'>
+		<div className='rounded-2xl bg-white/60 backdrop-blur-md shadow border border-[#e0e4e8] p-6 w-full max-w-md mx-auto flex flex-col gap-4'>
 			<div className='flex flex-col items-center gap-1 mb-2'>
 				<span className='text-lg font-bold text-[#344e41] tracking-tight'>Progress Overview</span>
 				<span className='text-sm text-[#588157] font-medium'>{attempting} Attempting</span>

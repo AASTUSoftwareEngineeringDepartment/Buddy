@@ -26,7 +26,7 @@ import {
 	HelpCircle,
 } from "lucide-react";
 import {toast} from "sonner";
-import {format} from "date-fns";
+import {format, subDays} from "date-fns";
 import Link from "next/link";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
@@ -48,6 +48,7 @@ import {ChildSettingsModal} from "@/components/child-details/ChildSettingsModal"
 import {StreakProgress} from "@/components/child-details/StreakProgress";
 import {StreakHeatmap} from "@/components/child-details/StreakHeatmap";
 import {CircularStatsGraph} from "@/components/child-details/CircularStatsGraph";
+import {QuestionsAccordion} from "@/components/child-details/QuestionsAccordion";
 
 // Mock data for demonstration
 const mockProgress = {
@@ -190,15 +191,17 @@ const mockQuizzes = {
 	},
 };
 
-// Mock activity data for heatmap
-const mockActivityData = [
-	{date: "2023-06-01", count: 2},
-	{date: "2023-06-02", count: 1},
-	{date: "2023-06-03", count: 0},
-	{date: "2023-06-04", count: 4},
-	{date: "2023-06-05", count: 3},
-	// ... add more for demo or generate random data for a year
-];
+// Generate mock activity data for the last 180 days
+const today = new Date();
+const mockActivityData = Array.from({length: 180}).map((_, i) => {
+	const date = subDays(today, 179 - i);
+	// More activity on weekdays, less on weekends
+	const count = [0, 1, 2, 3, 4, 5][Math.floor(Math.random() * 6)];
+	return {
+		date: format(date, "yyyy-MM-dd"),
+		count: date.getDay() === 0 || date.getDay() === 6 ? Math.floor(count / 2) : count,
+	};
+});
 
 export default function ChildDetailsPage() {
 	const params = useParams();
@@ -229,6 +232,7 @@ export default function ChildDetailsPage() {
 	const [rewards, setRewards] = useState({xp: 0, level: 0});
 	const [streakData, setStreakData] = useState<any>(null);
 	const [stats, setStats] = useState<any>(null);
+	const [questions, setQuestions] = useState<any[]>([]);
 
 	useEffect(() => {
 		const fetchChildDetails = async () => {
@@ -280,6 +284,19 @@ export default function ChildDetailsPage() {
 			}
 		};
 		fetchStats();
+	}, [child]);
+
+	useEffect(() => {
+		if (!child) return;
+		const fetchQuestions = async () => {
+			try {
+				const data = await childrenApi.getChildQuestions(child.child_id, 10);
+				setQuestions(data);
+			} catch (e) {
+				// Optionally handle error
+			}
+		};
+		fetchQuestions();
 	}, [child]);
 
 	const handleEdit = () => setEditOpen(true);
@@ -432,6 +449,7 @@ export default function ChildDetailsPage() {
 				<div className='md:col-span-4 flex flex-col gap-8'>
 					<StoriesList />
 					<StreakHeatmap activityData={mockActivityData} />
+					{questions.length > 0 && <QuestionsAccordion questions={questions} />}
 				</div>
 			</div>
 		</div>

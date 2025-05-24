@@ -9,6 +9,7 @@ from app.services.image.image_service import ImageService
 from app.repositories.story_repository import StoryRepository
 from app.db.mongo import MongoDB
 from datetime import datetime
+from app.services.vocabulary.vocabulary_service import VocabularyService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -21,6 +22,7 @@ class StoryService:
         self.llm_service = LLMService()
         self.image_service = ImageService()
         self.story_repository = StoryRepository()
+        self.vocabulary_service = VocabularyService()
         self.db = MongoDB.get_db()
 
     async def retrieve_relevant_stories(
@@ -89,14 +91,10 @@ class StoryService:
                 logger.info(f"Creating default settings for child {child_id}")
                 default_settings = {
                     "child_id": child_id,
-                    "preferences": ["animals", "nature", "games"],
+                    "age_range": "4-8",
                     "themes": ["friendship", "adventure", "learning"],
                     "moral_values": ["kindness", "courage", "honesty"],
-                    "favorite_animal": None,
-                    "favorite_character": None,
-                    "screen_time": 0,
-                    "created_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow()
+                    "preferences": ["animals", "nature", "games"]
                 }
                 try:
                     await self.db["settings"].insert_one(default_settings)
@@ -199,7 +197,7 @@ Remember to:
             story = Story(
                 title=story_data["title"],
                 content=story_data["content"],
-                age_range="4-8",  # Default age range since it's not in settings
+                age_range=child_settings.get("age_range", "4-8"),
                 themes=child_settings.get("themes", []),
                 moral_values=child_settings.get("moral_values", []),
                 image_url=story_data.get("image_url") or None,  # Set to None if not provided
@@ -209,20 +207,14 @@ Remember to:
             # Store the story
             stored_story = await self.story_repository.create_story(story)
 
-            # Store vocabulary words if present in the response
-            if "vocabulary_table" in story_data:
-                vocabulary_words = [
-                    VocabularyWord(
-                        word=vocab["word"],
-                        synonym=vocab["synonym"],
-                        meaning=vocab.get("meaning", ""),  # Handle optional meaning field
-                        related_words=vocab["related_words"],
-                        story_id=stored_story.story_id,
-                        child_id=child_id
-                    )
-                    for vocab in story_data["vocabulary_table"]
-                ]
-                await self.story_repository.create_vocabulary_words(vocabulary_words)
+            # Generate vocabulary words for the story
+            await self.vocabulary_service.generate_vocabulary_words(
+                text=story.content,
+                child_id=child_id,
+                story_id=stored_story.story_id,
+                age_range=child_settings.get("age_range", "4-8"),
+                difficulty_level="easy"  # You might want to adjust this based on child's level
+            )
 
             return stored_story
 

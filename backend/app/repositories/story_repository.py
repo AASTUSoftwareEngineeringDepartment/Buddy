@@ -78,11 +78,11 @@ class StoryRepository:
             else:
                 word["story_title"] = "Unknown Story"
             
-            # Ensure all required fields are present
+            # Ensure all required fields are present and not empty
             word_dict = {
                 "word": word["word"],
                 "synonym": word["synonym"],
-                "meaning": word.get("meaning", ""),  # Default to empty string if missing
+                "meaning": word.get("meaning") or f"Definition of {word['word']}",  # Provide a default meaning if missing
                 "related_words": word["related_words"],
                 "story_title": word["story_title"],
                 "created_at": word["created_at"]

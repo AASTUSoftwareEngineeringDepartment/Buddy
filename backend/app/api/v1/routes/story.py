@@ -123,6 +123,7 @@ async def get_my_vocabulary(
             VocabularyResponse(
                 word=word["word"],
                 synonym=word["synonym"],
+                meaning=word["meaning"],
                 related_words=word["related_words"],
                 story_title=word["story_title"],
                 created_at=word["created_at"]

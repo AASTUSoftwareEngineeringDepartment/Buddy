@@ -5,6 +5,7 @@ import json
 import logging
 from typing import Dict, Any, Type, List
 from app.config.settings import get_settings
+from jsonschema import validate, ValidationError
 
 # Add this import for structured output
 from google.generativeai.types import GenerationConfig
@@ -289,3 +290,75 @@ class LLMService:
         except Exception as e:
             logger.error(f"Error in generate_content_with_structured_schema: {str(e)}")
             raise
+
+    async def generate_content_with_json_format(
+        self,
+        system_instruction: str,
+        query: str,
+        response_schema: dict
+    ) -> str:
+        """
+        Generates content ensuring it adheres to a specified JSON schema.
+        """
+        try:
+            # Create example response based on schema
+            example_response = {}
+            for field_name, field_schema in response_schema["properties"].items():
+                if field_schema.get("type") == "array":
+                    example_response[field_name] = []
+                else:
+                    example_response[field_name] = f"<{field_schema.get('description', 'value')}>"
+
+            # Add JSON schema instructions to the prompt
+            formatted_prompt = f"""
+            You are a JSON generator that must follow these rules exactly:
+            1. Generate ONLY a JSON object, nothing else
+            2. The JSON must match this schema exactly:
+            {json.dumps(response_schema, indent=2)}
+
+            Format your response like this example:
+            {json.dumps(example_response, indent=2)}
+
+            The content should be based on this prompt:
+            {query}
+
+            Remember:
+            - No text before or after the JSON
+            - No markdown formatting (no ```json or ```)
+            - No comments
+            - Properly escape strings
+            - Include all required fields
+            - Single, valid JSON object only
+            """
+
+            # Generate the response
+            response = self.model.generate_content(
+                formatted_prompt,
+                generation_config={
+                    "temperature": 0.7,
+                    "max_output_tokens": 2048,
+                }
+            )
+            
+            if not response or not hasattr(response, 'text'):
+                raise ValueError("Invalid response format from model")
+            
+            response_text = response.text
+            if not response_text:
+                raise ValueError("Empty response from model")
+            
+            # Extract and parse JSON
+            json_text = self._extract_json_from_text(response_text)
+            parsed_response = json.loads(json_text)
+            
+            # Validate against schema
+            validate(instance=parsed_response, schema=response_schema)
+            
+            return json_text
+
+        except ValidationError as e:
+            logger.error(f"Schema validation error: {str(e)}")
+            raise ValueError(f"Invalid response format: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error generating content: {str(e)}")
+            raise ValueError(f"Failed to generate content: {str(e)}")
