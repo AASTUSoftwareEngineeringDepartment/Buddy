@@ -8,6 +8,7 @@ import '../../../core/widgets/input_field.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
 import '../../blocs/auth/auth_state.dart';
+import '../../layouts/main_layout.dart';
 import '../home/home_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -48,7 +49,7 @@ class _LoginPageState extends State<LoginPage> {
           if (state is AuthAuthenticated) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (context) => const HomePage(),
+                builder: (context) => const MainLayout(),
               ),
             );
           }
