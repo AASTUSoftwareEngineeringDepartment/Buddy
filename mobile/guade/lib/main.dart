@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'core/theme/app_theme.dart';
 import 'data/datasources/counter_local_datasource.dart';
+import 'data/repositories/auth_repository.dart';
 import 'data/repositories/counter_repository_impl.dart';
 import 'domain/repositories/counter_repository.dart';
 import 'domain/usecases/get_counter.dart';
 import 'domain/usecases/increment_counter.dart';
+import 'presentation/blocs/auth/auth_bloc.dart';
+import 'presentation/pages/auth/login_page.dart';
 import 'presentation/pages/counter_page.dart';
-import 'presentation/providers/use_case_providers.dart';
+import 'presentation/pages/onboarding/onboarding_page.dart';
 
 final getIt = GetIt.instance;
 
@@ -26,6 +30,9 @@ Future<void> initializeDependencies() async {
   getIt.registerLazySingleton<CounterRepository>(
     () => CounterRepositoryImpl(getIt()),
   );
+  getIt.registerLazySingleton<AuthRepository>(
+    () => AuthRepository(),
+  );
 
   // Use cases
   getIt.registerLazySingleton(() => GetCounter(getIt()));
@@ -37,9 +44,11 @@ void main() async {
   await initializeDependencies();
   
   runApp(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(getIt<SharedPreferences>()),
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) => AuthBloc(getIt<AuthRepository>()),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -52,12 +61,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Clean Architecture Counter',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const CounterPage(),
+      title: 'Learning Adventure',
+      theme: AppTheme.lightTheme,
+      home: const OnboardingPage(),
     );
   }
 }

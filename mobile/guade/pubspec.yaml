@@ -43,6 +43,11 @@ dependencies:
     json_annotation: ^4.9.0
     # Local storage
     shared_preferences: ^2.2.2
+    # State management
+    flutter_bloc: ^8.1.4
+    equatable: ^2.0.5
+    # Network
+    dio: ^5.4.1
 
 dev_dependencies:
     flutter_test:
@@ -72,12 +77,11 @@ flutter:
     uses-material-design: true
     assets:
         - assets/images/
+        - assets/images/puppet.png
     fonts:
-        - family: MyFont
+        - family: JosefinSans
           fonts:
-              - asset: assets/fonts/MyFont-Regular.ttf
-              - asset: assets/fonts/MyFont-Bold.ttf
-                weight: 700
+              - asset: assets/fonts/JosefinSans-VariableFont_wght.ttf
 
     # To add assets to your application, add an assets section, like this:
     # assets:
