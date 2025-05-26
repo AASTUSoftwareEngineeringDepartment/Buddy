@@ -9,6 +9,7 @@ import '../../blocs/reward/reward_bloc.dart';
 import '../../blocs/reward/reward_state.dart';
 import '../../blocs/reward/reward_event.dart';
 import '../vocabulary/vocabulary_page.dart';
+import '../story/story_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -558,7 +559,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       emoji: '📖',
                       onTap: () {
                         // Navigate to Stories section
-                        _showComingSoon(context, 'Story Time');
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const StoryPage(),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -1031,7 +1036,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         return Transform.translate(
           offset: Offset(0, 30 * (1 - _cardAnimation.value)),
           child: Opacity(
-            opacity: _cardAnimation.value,
+            opacity: _cardAnimation.value.clamp(0.0, 1.0),
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -1169,7 +1174,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         return Transform.translate(
           offset: Offset(0, 40 * (1 - _cardAnimation.value)),
           child: Opacity(
-            opacity: _cardAnimation.value * 0.9,
+            opacity: (_cardAnimation.value * 0.9).clamp(0.0, 1.0),
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(

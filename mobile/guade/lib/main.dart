@@ -8,6 +8,7 @@ import 'data/repositories/auth_repository.dart';
 import 'data/repositories/counter_repository_impl.dart';
 import 'data/repositories/reward_repository.dart';
 import 'data/repositories/vocabulary_repository.dart';
+import 'data/repositories/story_repository.dart';
 import 'domain/repositories/counter_repository.dart';
 import 'domain/usecases/get_counter.dart';
 import 'domain/usecases/increment_counter.dart';
@@ -15,6 +16,7 @@ import 'presentation/blocs/auth/auth_bloc.dart';
 import 'presentation/blocs/auth/auth_state.dart';
 import 'presentation/blocs/reward/reward_bloc.dart';
 import 'presentation/blocs/vocabulary/vocabulary_bloc.dart';
+import 'presentation/blocs/story/story_bloc.dart';
 import 'presentation/pages/auth/login_page.dart';
 import 'presentation/pages/counter_page.dart';
 import 'presentation/pages/onboarding/onboarding_page.dart';
@@ -43,6 +45,7 @@ Future<void> initializeDependencies() async {
   getIt.registerLazySingleton<VocabularyRepository>(
     () => VocabularyRepository(),
   );
+  getIt.registerLazySingleton<StoryRepository>(() => StoryRepository());
 
   // Use cases
   getIt.registerLazySingleton(() => GetCounter(getIt()));
@@ -64,6 +67,9 @@ void main() async {
         RepositoryProvider<VocabularyRepository>(
           create: (_) => getIt<VocabularyRepository>(),
         ),
+        RepositoryProvider<StoryRepository>(
+          create: (_) => getIt<StoryRepository>(),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -73,6 +79,9 @@ void main() async {
           ),
           BlocProvider(
             create: (context) => VocabularyBloc(getIt<VocabularyRepository>()),
+          ),
+          BlocProvider(
+            create: (context) => StoryBloc(getIt<StoryRepository>()),
           ),
         ],
         child: const MyApp(),
