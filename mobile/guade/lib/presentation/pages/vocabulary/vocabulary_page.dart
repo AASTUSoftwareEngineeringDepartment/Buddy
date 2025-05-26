@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/services/tts_service.dart';
 import '../../../data/repositories/vocabulary_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_state.dart';
@@ -745,8 +746,10 @@ class _VocabularyCardState extends State<_VocabularyCard>
     with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
   bool _isRelatedWordsExpanded = false;
+  bool _isSpeaking = false;
   late AnimationController _animationController;
   late Animation<double> _expandAnimation;
+  final TTSService _ttsService = TTSService();
 
   @override
   void initState() {
@@ -759,6 +762,7 @@ class _VocabularyCardState extends State<_VocabularyCard>
       parent: _animationController,
       curve: Curves.easeInOut,
     );
+    _ttsService.initialize();
   }
 
   @override
@@ -784,6 +788,26 @@ class _VocabularyCardState extends State<_VocabularyCard>
     setState(() {
       _isRelatedWordsExpanded = !_isRelatedWordsExpanded;
     });
+  }
+
+  Future<void> _speakWord() async {
+    setState(() {
+      _isSpeaking = true;
+    });
+
+    try {
+      await _ttsService.speak(widget.vocabulary.word);
+      // Wait a bit for the speaking to complete
+      await Future.delayed(const Duration(milliseconds: 1500));
+    } catch (e) {
+      print('Error speaking word: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSpeaking = false;
+        });
+      }
+    }
   }
 
   @override
@@ -880,22 +904,85 @@ class _VocabularyCardState extends State<_VocabularyCard>
                         ],
                       ),
                     ),
-                    // Expand/Collapse indicator
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: AnimatedRotation(
-                        turns: _isExpanded ? 0.5 : 0,
-                        duration: const Duration(milliseconds: 300),
-                        child: Icon(
-                          PhosphorIcons.caretDown(),
-                          size: 16,
-                          color: AppColors.primary,
+                    // Voice button and Expand/Collapse indicator
+                    Row(
+                      children: [
+                        // Voice button
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: Tooltip(
+                              message: _ttsService.isSupported
+                                  ? 'Tap to hear pronunciation'
+                                  : 'Voice not available on this platform',
+                              child: InkWell(
+                                onTap: _isSpeaking ? null : _speakWord,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: _isSpeaking
+                                        ? AppColors.accent1.withOpacity(0.2)
+                                        : _ttsService.isSupported
+                                        ? AppColors.accent1.withOpacity(0.1)
+                                        : AppColors.textSecondary.withOpacity(
+                                            0.1,
+                                          ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _ttsService.isSupported
+                                          ? AppColors.accent1.withOpacity(0.3)
+                                          : AppColors.textSecondary.withOpacity(
+                                              0.3,
+                                            ),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: _isSpeaking
+                                      ? SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  AppColors.accent1,
+                                                ),
+                                          ),
+                                        )
+                                      : Icon(
+                                          _ttsService.isSupported
+                                              ? PhosphorIcons.speakerHigh()
+                                              : PhosphorIcons.speakerSlash(),
+                                          size: 16,
+                                          color: _ttsService.isSupported
+                                              ? AppColors.accent1
+                                              : AppColors.textSecondary,
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        // Expand/Collapse indicator
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: AnimatedRotation(
+                            turns: _isExpanded ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 300),
+                            child: Icon(
+                              PhosphorIcons.caretDown(),
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
