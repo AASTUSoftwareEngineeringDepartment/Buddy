@@ -5,6 +5,7 @@ from app.api.v1.dependencies.auth import get_current_user, require_role
 from app.models.enums import UserRole
 from typing import List
 import logging
+from app.db.mongo import MongoDB
 
 router = APIRouter(prefix="/vocabulary", tags=["vocabulary"])
 logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ async def get_my_vocabulary(
             detail=f"Failed to retrieve vocabulary words: {str(e)}"
         )
 
-@router.get("/story/{story_id}", response_model=List[VocabularyResponse])
+@router.get("/story/{story_id}/vocabulary", response_model=List[VocabularyResponse])
 async def get_story_vocabulary(
     story_id: str,
     current_user: tuple[str, UserRole] = Depends(get_current_user),
@@ -73,6 +74,22 @@ async def get_story_vocabulary(
                     status_code=403,
                     detail="Not authorized to access this story's vocabulary"
                 )
+        # If user is a parent, verify they have access to the child's story
+        elif user_role == UserRole.PARENT:
+            db = MongoDB.get_db()
+            # Get the child_id from the first vocabulary word
+            if vocabulary_words:
+                child_id = vocabulary_words[0].child_id
+                # Verify parent-child relationship
+                child = await db["children"].find_one({
+                    "child_id": child_id,
+                    "parent_id": user_id
+                })
+                if not child:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Not authorized to access this story's vocabulary"
+                    )
         
         return [
             VocabularyResponse(

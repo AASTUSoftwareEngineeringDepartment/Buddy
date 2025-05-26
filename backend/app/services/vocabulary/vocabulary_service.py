@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict
 from app.models.story.story import VocabularyWord
 from app.services.llm.llm_service import LLMService
-from app.repositories.story_repository import StoryRepository
+from app.repositories.vocabulary_repository import VocabularyRepository
 import logging
 import json
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class VocabularyService:
     def __init__(self):
         self.llm_service = LLMService()
-        self.story_repository = StoryRepository()
+        self.vocabulary_repository = VocabularyRepository()
 
     async def generate_vocabulary_words(
         self,
@@ -141,7 +141,7 @@ Remember to:
                 ]
 
                 # Store vocabulary words
-                await self.story_repository.create_vocabulary_words(vocabulary_words)
+                await self.vocabulary_repository.create_vocabulary_words(vocabulary_words)
 
                 return vocabulary_words
 
@@ -161,10 +161,8 @@ Remember to:
 
     async def get_child_vocabulary_words(self, child_id: str) -> List[Dict]:
         """Get all vocabulary words for a specific child with story titles."""
-        return await self.story_repository.get_child_vocabulary_words(child_id)
+        return await self.vocabulary_repository.get_child_vocabulary_words(child_id)
 
-    async def get_vocabulary_words_by_story(self, story_id: str) -> List[VocabularyWord]:
-        """Get all vocabulary words for a specific story."""
-        cursor = self.story_repository.vocabulary_collection.find({"story_id": story_id})
-        words = await cursor.to_list(length=None)
-        return [VocabularyWord(**word) for word in words] 
+    async def get_vocabulary_words_by_story(self, story_id: str) -> List[Dict]:
+        """Get all vocabulary words for a specific story with story title."""
+        return await self.vocabulary_repository.get_vocabulary_words_by_story(story_id) 

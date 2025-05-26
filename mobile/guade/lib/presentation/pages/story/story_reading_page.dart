@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/story_model.dart';
 import 'dart:math' as math;
+import 'vocabulary_quiz_page.dart';
 
 class StoryReadingPage extends StatefulWidget {
   final StoryModel story;
@@ -74,7 +75,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
       return;
     }
 
-        setState(() {
+    setState(() {
       _isPlaying = true;
       _currentWordIndex = 0;
     });
@@ -145,11 +146,14 @@ class _StoryReadingPageState extends State<StoryReadingPage>
   }
 
   void _startVocabularyTest() {
-    setState(() {
-      _isTestActive = true;
-      _currentQuestionIndex = 0;
-      _score = 0;
-    });
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => VocabularyQuizPage(
+          questions: _vocabularyQuestions,
+          storyTitle: widget.story.title,
+        ),
+      ),
+    );
   }
 
   void _answerQuestion(String selectedAnswer) {
@@ -213,7 +217,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-    setState(() {
+              setState(() {
                 _isTestActive = false;
               });
             },
@@ -267,7 +271,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 100) {
       if (!_isStoryCompleted) {
-    setState(() {
+        setState(() {
           _isStoryCompleted = true;
         });
       }
@@ -299,8 +303,8 @@ class _StoryReadingPageState extends State<StoryReadingPage>
           ),
         ),
         child: SafeArea(
-        child: Stack(
-          children: [
+          child: Stack(
+            children: [
               // Main Content
               AnimatedBuilder(
                 animation: _animationController,
@@ -355,7 +359,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                               padding: const EdgeInsets.all(24),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+                                children: [
                                   // Story Title
                                   Text(
                                     widget.story.title,
@@ -383,12 +387,12 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                           index == _currentWordIndex;
                                       final isRead = index < _currentWordIndex;
 
-              return Container(
+                                      return Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 6,
                                           vertical: 4,
                                         ),
-                decoration: BoxDecoration(
+                                        decoration: BoxDecoration(
                                           color: isCurrentWord
                                               ? AppColors.accent3.withOpacity(
                                                   0.3,
@@ -424,21 +428,21 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                         ),
                                       );
                                     }).toList(),
-                      ),
-                    ],
-                  ),
-                ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
 
                           // Story Completion Section
-                          if (_isStoryCompleted && !_isTestActive)
+                          if (_isStoryCompleted)
                             SliverToBoxAdapter(
-            child: Container(
+                              child: Container(
                                 margin: const EdgeInsets.all(24),
                                 padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
                                       AppColors.accent1.withOpacity(0.1),
                                       AppColors.accent1.withOpacity(0.05),
                                     ],
@@ -455,11 +459,11 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                       // Celebration Animation
                                       Container(
                                         padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
+                                        decoration: BoxDecoration(
                                           color: AppColors.accent1.withOpacity(
                                             0.1,
                                           ),
-                  shape: BoxShape.circle,
+                                          shape: BoxShape.circle,
                                         ),
                                         child: Icon(
                                           PhosphorIcons.star(
@@ -498,10 +502,10 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                       ),
                                       const SizedBox(height: 24),
                                       // Playful Quiz Button
-                    Container(
+                                      Container(
                                         width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
                                             colors: [
                                               AppColors.accent1,
                                               AppColors.accent1.withOpacity(
@@ -511,9 +515,9 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                           ),
                                           borderRadius: BorderRadius.circular(
                                             20,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
                                               color: AppColors.accent1
                                                   .withOpacity(0.3),
                                               blurRadius: 12,
@@ -527,8 +531,8 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                             onTap: _startVocabularyTest,
                                             borderRadius: BorderRadius.circular(
                                               20,
-                      ),
-                      child: Padding(
+                                            ),
+                                            child: Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                     horizontal: 24,
@@ -547,12 +551,12 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                                   ),
                                                   const SizedBox(width: 12),
                                                   Flexible(
-                      child: Text(
+                                                    child: Text(
                                                       'Let\'s Play Word Game!',
                                                       style: AppTextStyles
                                                           .heading3
                                                           .copyWith(
-                          color: Colors.white,
+                                                            color: Colors.white,
                                                             fontSize: 18,
                                                           ),
                                                       textAlign:
@@ -564,12 +568,12 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                                     PhosphorIcons.arrowRight(),
                                                     color: Colors.white,
                                                     size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                       const SizedBox(height: 12),
                                       Text(
@@ -581,9 +585,9 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                           fontSize: 12,
                                         ),
                                         textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -591,44 +595,44 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                           // Vocabulary Test Section
                           if (_isTestActive)
                             SliverToBoxAdapter(
-              child: Container(
+                              child: Container(
                                 margin: const EdgeInsets.all(24),
                                 padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
                                       AppColors.accent2.withOpacity(0.1),
                                       AppColors.accent2.withOpacity(0.05),
                                     ],
                                   ),
                                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
+                                  border: Border.all(
                                     color: AppColors.accent2.withOpacity(0.3),
-                  ),
-                ),
-                child: Column(
+                                  ),
+                                ),
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
                                           PhosphorIcons.star(
                                             PhosphorIconsStyle.fill,
                                           ),
                                           color: AppColors.accent2,
-                        ),
-                        const SizedBox(width: 8),
+                                        ),
+                                        const SizedBox(width: 8),
                                         Text(
                                           'Vocabulary Quiz',
                                           style: AppTextStyles.heading3
                                               .copyWith(
-                          color: AppColors.accent2,
+                                                color: AppColors.accent2,
                                               ),
-                        ),
-                      ],
-                    ),
+                                        ),
+                                      ],
+                                    ),
                                     const SizedBox(height: 16),
-                    Text(
+                                    Text(
                                       'Question ${_currentQuestionIndex + 1}/${_vocabularyQuestions.length}',
                                       style: AppTextStyles.body2.copyWith(
                                         color: AppColors.textSecondary,
@@ -649,7 +653,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                         fontSize: 32,
                                       ),
                                     ),
-                    const SizedBox(height: 24),
+                                    const SizedBox(height: 24),
                                     ...(_vocabularyQuestions[_currentQuestionIndex]['options']
                                             as List<String>)
                                         .map(
@@ -688,13 +692,13 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                         .toList(),
                                   ],
                                 ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
+                  );
+                },
               ),
 
               // Interactive Elements
@@ -737,18 +741,18 @@ class _StoryReadingPageState extends State<StoryReadingPage>
 
         // Gradient Overlay
         Positioned.fill(
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
                   Colors.black.withOpacity(0.7),
                   Colors.black.withOpacity(0.5),
-              Colors.black.withOpacity(0.3),
-            ],
-          ),
-        ),
+                  Colors.black.withOpacity(0.3),
+                ],
+              ),
+            ),
           ),
         ),
 
@@ -776,57 +780,57 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                     color: AppColors.accent1.withOpacity(0.3),
                     width: 1,
                   ),
-                        boxShadow: [
-                          BoxShadow(
+                  boxShadow: [
+                    BoxShadow(
                       color: AppColors.accent1.withOpacity(0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
                       PhosphorIcons.sparkle(PhosphorIconsStyle.fill),
-                            size: 16,
+                      size: 16,
                       color: AppColors.accent1,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
                       'Adventure Story',
                       style: AppTextStyles.body2.copyWith(
                         color: AppColors.accent1,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ],
                 ),
               ),
             ],
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildInteractiveControls() {
     return Container(
       padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
+      decoration: BoxDecoration(
         color: _isDarkMode
             ? Colors.grey[900]!.withOpacity(0.95)
             : Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
+        boxShadow: [
+          BoxShadow(
             color: AppColors.accent3.withOpacity(0.2),
-                  blurRadius: 20,
+            blurRadius: 20,
             offset: const Offset(0, 8),
-                  ),
-              ],
-            ),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -871,10 +875,10 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                         },
                       ),
                     ],
-            ),
-          ),
-        );
-      },
+                  ),
+                ),
+              );
+            },
           ),
           _buildControlButton(
             icon: _isDarkMode ? PhosphorIcons.sun() : PhosphorIcons.moon(),
@@ -899,11 +903,11 @@ class _StoryReadingPageState extends State<StoryReadingPage>
     return GestureDetector(
       onTap: onTap,
       child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
             padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
+            decoration: BoxDecoration(
               color: _isDarkMode
                   ? Colors.grey[800]
                   : AppColors.accent3.withOpacity(0.1),
@@ -916,16 +920,16 @@ class _StoryReadingPageState extends State<StoryReadingPage>
             ),
           ),
           const SizedBox(height: 4),
-        Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
               color: _isDarkMode
                   ? Colors.white.withOpacity(0.7)
                   : AppColors.textSecondary,
-            fontSize: 12,
+              fontSize: 12,
+            ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }

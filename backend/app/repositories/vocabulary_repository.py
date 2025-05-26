@@ -1,58 +1,76 @@
-from typing import List, Optional
+from typing import List, Dict, Optional
 from app.db.mongo import MongoDB
 from app.models.story.story import VocabularyWord
 from datetime import datetime
+from bson import ObjectId
 
 class VocabularyRepository:
     def __init__(self):
         self.db = MongoDB.get_db()
-        self.vocabulary_collection = self.db["vocabulary_words"]
-        self.stories_collection = self.db["stories"]
+        self.vocabulary_collection = self.db.vocabulary_collection
+        self.story_collection = self.db.story_collection
 
     async def create_vocabulary_words(self, vocabulary_words: List[VocabularyWord]) -> None:
-        """Store vocabulary words in the database."""
-        if vocabulary_words:
-            await self.vocabulary_collection.insert_many([word.model_dump() for word in vocabulary_words])
+        """Create multiple vocabulary words."""
+        await self.vocabulary_collection.insert_many([word.dict() for word in vocabulary_words])
 
-    async def get_child_vocabulary_words(self, child_id: str) -> List[dict]:
+    async def get_child_vocabulary_words(self, child_id: str) -> List[Dict]:
         """Get all vocabulary words for a specific child with story titles."""
-        # Get vocabulary words from vocabulary_words collection
-        cursor = self.vocabulary_collection.find(
-            {"child_id": child_id}
-        ).sort("created_at", -1)
-        
-        vocabulary_words = await cursor.to_list(length=None)
-        
-        # Get story titles for each vocabulary word
-        for word in vocabulary_words:
-            story = await self.stories_collection.find_one(
-                {"story_id": word["story_id"]},
-                {"title": 1}
-            )
-            if story:
-                word["story_title"] = story["title"]
-            else:
-                word["story_title"] = "Unknown Story"
-            
-            # Ensure all required fields are present
-            word_dict = {
-                "word": word["word"],
-                "synonym": word["synonym"],
-                "meaning": word.get("meaning", ""),  # Default to empty string if missing
-                "related_words": word["related_words"],
-                "story_title": word["story_title"],
-                "created_at": word["created_at"]
+        pipeline = [
+            {"$match": {"child_id": child_id}},
+            {
+                "$lookup": {
+                    "from": "story_collection",
+                    "localField": "story_id",
+                    "foreignField": "_id",
+                    "as": "story"
+                }
+            },
+            {"$unwind": "$story"},
+            {
+                "$project": {
+                    "word": 1,
+                    "synonym": 1,
+                    "meaning": 1,
+                    "related_words": 1,
+                    "story_id": 1,
+                    "child_id": 1,
+                    "created_at": 1,
+                    "story_title": "$story.title"
+                }
             }
-            word.clear()
-            word.update(word_dict)
-                
-        return vocabulary_words
+        ]
+        cursor = self.vocabulary_collection.aggregate(pipeline)
+        return await cursor.to_list(length=None)
 
-    async def get_vocabulary_words_by_story(self, story_id: str) -> List[VocabularyWord]:
-        """Get all vocabulary words for a specific story."""
-        cursor = self.vocabulary_collection.find({"story_id": story_id})
-        words = await cursor.to_list(length=None)
-        return [VocabularyWord(**word) for word in words]
+    async def get_vocabulary_words_by_story(self, story_id: str) -> List[Dict]:
+        """Get all vocabulary words for a specific story with story title."""
+        pipeline = [
+            {"$match": {"story_id": story_id}},
+            {
+                "$lookup": {
+                    "from": "story_collection",
+                    "localField": "story_id",
+                    "foreignField": "_id",
+                    "as": "story"
+                }
+            },
+            {"$unwind": "$story"},
+            {
+                "$project": {
+                    "word": 1,
+                    "synonym": 1,
+                    "meaning": 1,
+                    "related_words": 1,
+                    "story_id": 1,
+                    "child_id": 1,
+                    "created_at": 1,
+                    "story_title": "$story.title"
+                }
+            }
+        ]
+        cursor = self.vocabulary_collection.aggregate(pipeline)
+        return await cursor.to_list(length=None)
 
     async def delete_vocabulary_words(self, story_id: str) -> bool:
         """Delete all vocabulary words for a specific story."""
