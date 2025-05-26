@@ -11,6 +11,7 @@ import '../../blocs/story/story_event.dart';
 import '../../blocs/story/story_state.dart';
 import '../../../data/models/story_model.dart';
 import 'dart:math' as math;
+import 'story_reading_page.dart';
 
 class StoryPage extends StatelessWidget {
   const StoryPage({super.key});
@@ -868,30 +869,40 @@ class _StoryPageViewState extends State<_StoryPageView>
                       ),
 
                       // Read button
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              AppColors.accent2,
-                              AppColors.accent2.withOpacity(0.8),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  StoryReadingPage(story: story),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppColors.accent2,
+                                AppColors.accent2.withOpacity(0.8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.accent2.withOpacity(0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.accent2.withOpacity(0.4),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          PhosphorIcons.play(PhosphorIconsStyle.fill),
-                          size: 20,
-                          color: Colors.white,
+                          child: Icon(
+                            PhosphorIcons.play(PhosphorIconsStyle.fill),
+                            size: 20,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -993,45 +1004,57 @@ class _StoryPageViewState extends State<_StoryPageView>
                       const Spacer(),
 
                       // Read now button
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.accent3,
-                              AppColors.accent3.withOpacity(0.8),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  StoryReadingPage(story: story),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.accent3,
+                                AppColors.accent3.withOpacity(0.8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.accent3.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.accent3.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Read Now',
-                              style: AppTextStyles.body2.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Read Now',
+                                style: AppTextStyles.body2.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              PhosphorIcons.arrowRight(PhosphorIconsStyle.bold),
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Icon(
+                                PhosphorIcons.arrowRight(
+                                  PhosphorIconsStyle.bold,
+                                ),
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
