@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:get_it/get_it.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../blocs/auth/auth_bloc.dart';
@@ -10,6 +11,9 @@ import '../../blocs/reward/reward_state.dart';
 import '../../blocs/reward/reward_event.dart';
 import '../vocabulary/vocabulary_page.dart';
 import '../story/story_page.dart';
+import '../question/question_page.dart';
+import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/question_repository.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -136,9 +140,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 physics: const BouncingScrollPhysics(),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       // Header with mascot and greeting
                       _buildHeader(),
                       const SizedBox(height: 24),
@@ -182,7 +186,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       animation: _floatingAnimation,
       builder: (context, child) {
         return Stack(
-                  children: [
+          children: [
             // Floating stars
             Positioned(
               top: 100 + (20 * _floatingAnimation.value),
@@ -331,22 +335,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   AppColors.primary.withOpacity(0.05),
                                 ],
                               ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.2),
                                   blurRadius: 25,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
                               padding: const EdgeInsets.all(20.0),
-                        child: Image.asset(
-                          'assets/images/puppet.png',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
+                              child: Image.asset(
+                                'assets/images/puppet.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -408,14 +412,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 const SizedBox(width: 24),
 
                 // Greeting text
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
                         _getGreeting(),
-                            style: AppTextStyles.heading2.copyWith(
-                              color: AppColors.primary,
+                        style: AppTextStyles.heading2.copyWith(
+                          color: AppColors.primary,
                           fontWeight: FontWeight.w800,
                           fontSize: 28,
                           letterSpacing: -0.5,
@@ -508,9 +512,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         AppColors.primary.withOpacity(0.8),
                       ],
                       emoji: '🧪',
-                      onTap: () {
+                      onTap: () async {
                         // Navigate to Science section
-                        _showComingSoon(context, 'Science Lab');
+                        final authState = context.read<AuthBloc>().state;
+                        if (authState is AuthAuthenticated) {
+                          final userProfile = await GetIt.I<AuthRepository>().getCurrentUserProfile(authState.response.accessToken);
+                          if (mounted) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => QuestionPage(
+                                  topic: 'science',
+                                  childId: userProfile.userId,
+                                ),
+                              ),
+                            );
+                          }
+                        }
                       },
                     ),
                   ),
@@ -531,12 +548,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         AppColors.secondary.withOpacity(0.8),
                       ],
                       emoji: '📚',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const VocabularyPage(),
-                          ),
-                        );
+                      onTap: () async {
+                        final authState = context.read<AuthBloc>().state;
+                        if (authState is AuthAuthenticated) {
+                          final userProfile = await GetIt.I<AuthRepository>().getCurrentUserProfile(authState.response.accessToken);
+                          if (mounted) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => QuestionPage(
+                                  topic: 'english',
+                                  childId: userProfile.userId,
+                                ),
+                              ),
+                            );
+                          }
+                        }
                       },
                     ),
                   ),
@@ -655,7 +681,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                          Text(
+                    Text(
                       title,
                       style: AppTextStyles.heading3.copyWith(
                         color: AppColors.textPrimary,
@@ -667,13 +693,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     Text(
                       subtitle,
                       style: AppTextStyles.body2.copyWith(
-                              color: AppColors.textSecondary,
+                        color: AppColors.textSecondary,
                         fontSize: 14,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
+                  ],
+                ),
+              ),
 
               // Arrow indicator
               Container(
@@ -690,10 +716,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   PhosphorIcons.arrowRight(),
                   size: 20,
                   color: gradient[0],
-                      ),
-                    ),
-                  ],
                 ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -742,24 +768,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               children: [
                 Row(
                   children: [
-                Container(
+                    Container(
                       padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
                             AppColors.accent2,
                             AppColors.accent2.withOpacity(0.8),
                           ],
                         ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
                             color: AppColors.accent2.withOpacity(0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
                       child: Icon(
                         PhosphorIcons.trophy(PhosphorIconsStyle.fill),
                         color: Colors.white,
@@ -768,9 +794,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                  child: Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                        children: [
                           Text(
                             'Your Progress 🎯',
                             style: AppTextStyles.heading3.copyWith(
@@ -783,10 +809,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             style: AppTextStyles.body2.copyWith(
                               color: AppColors.textSecondary,
                             ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -823,10 +849,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     _buildStatChip(
                       'Level ${reward.level}',
                       PhosphorIcons.crown(PhosphorIconsStyle.fill),
-                  AppColors.accent3,
+                      AppColors.accent3,
+                    ),
+                  ],
                 ),
-              ],
-            ),
               ],
             ),
           );
@@ -937,7 +963,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
             boxShadow: [
               BoxShadow(
-            color: color.withOpacity(0.1),
+                color: color.withOpacity(0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -1019,8 +1045,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('Got it!', style: TextStyle(color: Colors.white)),
           ),
@@ -1096,13 +1122,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         ),
                       );
                     },
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
                           'Daily Challenge! 🎯',
                           style: AppTextStyles.heading3.copyWith(
                             color: AppColors.accent1,
@@ -1113,8 +1139,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         const SizedBox(height: 4),
                         Text(
                           'Learn 3 new words today!',
-                style: AppTextStyles.body2.copyWith(
-                  color: AppColors.textSecondary,
+                          style: AppTextStyles.body2.copyWith(
+                            color: AppColors.textSecondary,
                             fontSize: 14,
                           ),
                         ),
@@ -1135,10 +1161,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 AppColors.accent1,
                               ),
                             ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
                           '2/3 words learned today! 🌟',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.accent1,
@@ -1334,8 +1360,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             opacity: _cardAnimation.value,
             child: Container(
               width: 140,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -1349,29 +1375,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           Colors.grey.withOpacity(0.2),
                         ],
                 ),
-        borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isUnlocked
                       ? color.withOpacity(0.3)
                       : Colors.grey.withOpacity(0.3),
                   width: 1.5,
                 ),
-        boxShadow: [
-          BoxShadow(
+                boxShadow: [
+                  BoxShadow(
                     color: isUnlocked
                         ? color.withOpacity(0.1)
                         : Colors.grey.withOpacity(0.1),
                     blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
               child: Column(
-        children: [
+                children: [
                   // Badge icon
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
                       gradient: isUnlocked
                           ? LinearGradient(
                               colors: [color, color.withOpacity(0.8)],
@@ -1382,7 +1408,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 Colors.grey.withOpacity(0.3),
                               ],
                             ),
-              borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12),
                       boxShadow: isUnlocked
                           ? [
                               BoxShadow(
@@ -1402,17 +1428,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                   ),
                   const SizedBox(height: 8),
-                Text(
-                  title,
+                  Text(
+                    title,
                     style: AppTextStyles.body2.copyWith(
                       color: isUnlocked ? AppColors.textPrimary : Colors.grey,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
                     textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
                     description,
                     style: AppTextStyles.caption.copyWith(
                       color: isUnlocked

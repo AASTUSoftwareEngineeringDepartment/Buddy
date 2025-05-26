@@ -9,6 +9,7 @@ import 'data/repositories/counter_repository_impl.dart';
 import 'data/repositories/reward_repository.dart';
 import 'data/repositories/vocabulary_repository.dart';
 import 'data/repositories/story_repository.dart';
+import 'data/repositories/question_repository.dart';
 import 'domain/repositories/counter_repository.dart';
 import 'domain/usecases/get_counter.dart';
 import 'domain/usecases/increment_counter.dart';
@@ -47,6 +48,9 @@ Future<void> initializeDependencies() async {
     () => VocabularyRepository(Dio()),
   );
   getIt.registerLazySingleton<StoryRepository>(() => StoryRepository());
+  getIt.registerLazySingleton<QuestionRepository>(
+    () => QuestionRepository(Dio()),
+  );
 
   // Use cases
   getIt.registerLazySingleton(() => GetCounter(getIt()));

@@ -36,4 +36,7 @@ class AppColors {
   static const Color buttonPrimary = Color(0xFFE53935); // Strong red
   static const Color buttonSecondary = Color(0xFF4CAF50); // Bright green
   static const Color buttonDisabled = Color(0xFFBDBDBD); // Gray
-} 
+
+  // Border Color
+  static const Color border = Color(0xFFE0E0E0);
+}
