@@ -324,11 +324,11 @@ class _CreativeProfileView extends StatelessWidget {
                       const SizedBox(width: 3),
                       Text(
                         'LV ${reward?.level ?? 1}',
-                        style: AppTextStyles.caption.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                    style: AppTextStyles.caption.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                           fontSize: 11,
-                        ),
+                    ),
                       ),
                     ],
                   ),
@@ -377,9 +377,9 @@ class _CreativeProfileView extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  '${profile.role.toUpperCase()} • Learning Explorer',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.secondary,
+              '${profile.role.toUpperCase()} • Learning Explorer',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.secondary,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -438,7 +438,7 @@ class _CreativeProfileView extends StatelessWidget {
                         '${reward.xp} XP',
                         style: AppTextStyles.body1.copyWith(
                           color: AppColors.accent1,
-                          fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
                       ),
@@ -529,10 +529,10 @@ class _CreativeProfileView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Learning Journey',
-                      style: AppTextStyles.heading3.copyWith(
-                        color: AppColors.accent2,
+              Text(
+                'Learning Journey',
+                style: AppTextStyles.heading3.copyWith(
+                  color: AppColors.accent2,
                         fontWeight: FontWeight.w700,
                         fontSize: 20,
                       ),
@@ -542,10 +542,10 @@ class _CreativeProfileView extends StatelessWidget {
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.accent2.withOpacity(0.7),
                         fontSize: 12,
-                      ),
-                    ),
-                  ],
                 ),
+              ),
+            ],
+          ),
               ),
             ],
           ),
@@ -570,16 +570,16 @@ class _CreativeProfileView extends StatelessWidget {
               ),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
                 // Progress Header with Level Info
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                  Text(
                           'Level $currentLevel → ${currentLevel + 1}',
                           style: AppTextStyles.body1.copyWith(
                             fontWeight: FontWeight.w600,
@@ -591,10 +591,10 @@ class _CreativeProfileView extends StatelessWidget {
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.textSecondary,
                             fontSize: 11,
-                          ),
-                        ),
-                      ],
                     ),
+                  ),
+                ],
+              ),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -620,10 +620,10 @@ class _CreativeProfileView extends StatelessWidget {
                           color: AppColors.accent2,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
                 // Modern Progress Bar with Gradient
                 Container(
@@ -665,7 +665,7 @@ class _CreativeProfileView extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
+          Text(
                           '$xpInCurrentLevel XP',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.textSecondary,
@@ -757,47 +757,47 @@ class _CreativeProfileView extends StatelessWidget {
         ),
         // Stats Cards
         Row(
-          children: [
-            Expanded(
+      children: [
+        Expanded(
               child: _buildModernStatCard(
                 icon: PhosphorIcons.crown(PhosphorIconsStyle.fill),
                 title: 'Level',
                 value: '${reward?.level ?? 1}',
                 subtitle: 'current',
-                color: AppColors.accent1,
+            color: AppColors.accent1,
                 gradient: [
                   AppColors.accent1,
                   AppColors.accent1.withOpacity(0.8),
                 ],
-              ),
-            ),
+          ),
+        ),
             const SizedBox(width: 16),
-            Expanded(
+        Expanded(
               child: _buildModernStatCard(
                 icon: PhosphorIcons.star(PhosphorIconsStyle.fill),
                 title: 'XP',
                 value: '${reward?.xp ?? 0}',
-                subtitle: 'earned',
-                color: AppColors.accent3,
+            subtitle: 'earned',
+            color: AppColors.accent3,
                 gradient: [
                   AppColors.accent3,
                   AppColors.accent3.withOpacity(0.8),
                 ],
-              ),
-            ),
+          ),
+        ),
             const SizedBox(width: 16),
-            Expanded(
+        Expanded(
               child: _buildModernStatCard(
                 icon: PhosphorIcons.graduationCap(PhosphorIconsStyle.fill),
-                title: 'Lessons',
+            title: 'Lessons',
                 value: '${((reward?.xp ?? 0) / 2).floor()}',
-                subtitle: 'completed',
-                color: AppColors.secondary,
+            subtitle: 'completed',
+            color: AppColors.secondary,
                 gradient: [
                   AppColors.secondary,
                   AppColors.secondary.withOpacity(0.8),
                 ],
-              ),
+          ),
             ),
           ],
         ),
@@ -844,30 +844,30 @@ class _CreativeProfileView extends StatelessWidget {
           // Icon with Gradient Background
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
+      decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: gradient,
               ),
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
+        boxShadow: [
+          BoxShadow(
                   color: color.withOpacity(0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
-                ),
-              ],
-            ),
+          ),
+        ],
+      ),
             child: Icon(icon, color: Colors.white, size: 24),
           ),
           const SizedBox(height: 16),
 
           // Value with Modern Typography
-          Text(
+                  Text(
             value,
             style: AppTextStyles.heading2.copyWith(
-              color: AppColors.textPrimary,
+                      color: AppColors.textPrimary,
               fontWeight: FontWeight.w800,
               fontSize: 24,
               letterSpacing: -0.5,
@@ -889,7 +889,7 @@ class _CreativeProfileView extends StatelessWidget {
           // Subtitle with Color Accent
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
+        decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -951,11 +951,11 @@ class _CreativeProfileView extends StatelessWidget {
             profile.email ?? 'Not provided',
           ),
           if (profile.birthDate != null)
-            _buildInfoRow(
+          _buildInfoRow(
               PhosphorIcons.cake(),
               'Birth Date',
               _formatBirthDate(profile.birthDate!),
-            ),
+          ),
           if (profile.nickname != null)
             _buildInfoRow(
               PhosphorIcons.smiley(),
@@ -971,7 +971,7 @@ class _CreativeProfileView extends StatelessWidget {
             PhosphorIcons.calendar(),
             'Member since',
             _formatDate(profile.createdAt),
-          ),
+            ),
         ],
       ),
     );

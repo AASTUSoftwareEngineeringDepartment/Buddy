@@ -4,7 +4,9 @@ import 'onboarding_content.dart';
 import '../auth/login_page.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
-  const OnboardingPage({super.key});
+  final VoidCallback? onCompleted;
+
+  const OnboardingPage({super.key, this.onCompleted});
 
   @override
   ConsumerState<OnboardingPage> createState() => _OnboardingPageState();
@@ -42,11 +44,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   void _navigateToLogin() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const LoginPage(),
-      ),
-    );
+    if (widget.onCompleted != null) {
+      widget.onCompleted!();
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+      );
+    }
   }
 
   @override
@@ -122,7 +126,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                             borderRadius: BorderRadius.circular(4),
                             color: _currentPage == index
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withOpacity(0.3),
                           ),
                         ),
                       ),
@@ -134,7 +140,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       child: ElevatedButton(
                         onPressed: _nextPage,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -194,10 +202,7 @@ class _OnboardingPageContent extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.contain,
-              ),
+              child: Image.asset(imagePath, fit: BoxFit.contain),
             ),
           ),
           const SizedBox(height: 32),
@@ -215,7 +220,9 @@ class _OnboardingPageContent extends StatelessWidget {
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.8),
+              color: Theme.of(
+                context,
+              ).colorScheme.onBackground.withOpacity(0.8),
             ),
             textAlign: TextAlign.center,
           ),
