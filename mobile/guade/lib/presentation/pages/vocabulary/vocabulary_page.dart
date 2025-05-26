@@ -86,17 +86,19 @@ class _VocabularyViewState extends State<_VocabularyView> {
         return true;
       }
       // Search in synonym
-      if (vocabulary.synonym.toLowerCase().contains(_searchQuery)) {
+      if (vocabulary.synonym?.toLowerCase().contains(_searchQuery) ?? false) {
         return true;
       }
       // Search in story title
-      if (vocabulary.storyTitle.toLowerCase().contains(_searchQuery)) {
+      if (vocabulary.storyTitle?.toLowerCase().contains(_searchQuery) ??
+          false) {
         return true;
       }
       // Search in related words
-      if (vocabulary.relatedWords.any(
-        (word) => word.toLowerCase().contains(_searchQuery),
-      )) {
+      if (vocabulary.relatedWords?.any(
+            (word) => word.toLowerCase().contains(_searchQuery),
+          ) ??
+          false) {
         return true;
       }
       return false;
@@ -861,7 +863,8 @@ class _VocabularyCardState extends State<_VocabularyCard>
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  widget.vocabulary.storyTitle,
+                                  widget.vocabulary.storyTitle ??
+                                      'Unknown Story',
                                   style: AppTextStyles.caption.copyWith(
                                     color: AppColors.secondary,
                                     fontWeight: FontWeight.w600,
@@ -1013,7 +1016,7 @@ class _VocabularyCardState extends State<_VocabularyCard>
                       // Synonym
                       _buildInfoChip(
                         'Synonym',
-                        widget.vocabulary.synonym,
+                        widget.vocabulary.synonym ?? 'No synonym available',
                         PhosphorIcons.equals(),
                         AppColors.accent1,
                       ),

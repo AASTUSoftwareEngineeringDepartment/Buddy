@@ -7,12 +7,12 @@ from bson import ObjectId
 class VocabularyRepository:
     def __init__(self):
         self.db = MongoDB.get_db()
-        self.vocabulary_collection = self.db.vocabulary_collection
-        self.story_collection = self.db.story_collection
+        self.vocabulary_collection = self.db["vocabulary_words"]
+        self.story_collection = self.db["stories"]
 
     async def create_vocabulary_words(self, vocabulary_words: List[VocabularyWord]) -> None:
         """Create multiple vocabulary words."""
-        await self.vocabulary_collection.insert_many([word.dict() for word in vocabulary_words])
+        await self.vocabulary_collection.insert_many([word.model_dump() for word in vocabulary_words])
 
     async def get_child_vocabulary_words(self, child_id: str) -> List[Dict]:
         """Get all vocabulary words for a specific child with story titles."""
@@ -20,9 +20,9 @@ class VocabularyRepository:
             {"$match": {"child_id": child_id}},
             {
                 "$lookup": {
-                    "from": "story_collection",
+                    "from": "stories",
                     "localField": "story_id",
-                    "foreignField": "_id",
+                    "foreignField": "story_id",
                     "as": "story"
                 }
             },
@@ -49,9 +49,9 @@ class VocabularyRepository:
             {"$match": {"story_id": story_id}},
             {
                 "$lookup": {
-                    "from": "story_collection",
+                    "from": "stories",
                     "localField": "story_id",
-                    "foreignField": "_id",
+                    "foreignField": "story_id",
                     "as": "story"
                 }
             },
@@ -81,7 +81,7 @@ class VocabularyRepository:
         """Update a vocabulary word."""
         word_dict = word.model_dump()
         result = await self.vocabulary_collection.update_one(
-            {"_id": word_id},
+            {"_id": ObjectId(word_id)},
             {"$set": word_dict}
         )
         if result.modified_count > 0:
@@ -90,7 +90,7 @@ class VocabularyRepository:
 
     async def get_vocabulary_word(self, word_id: str) -> Optional[VocabularyWord]:
         """Get a vocabulary word by its ID."""
-        word = await self.vocabulary_collection.find_one({"_id": word_id})
+        word = await self.vocabulary_collection.find_one({"_id": ObjectId(word_id)})
         return VocabularyWord(**word) if word else None
 
     async def get_recent_vocabulary_words(

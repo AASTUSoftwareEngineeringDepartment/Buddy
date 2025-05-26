@@ -7,11 +7,11 @@ part 'vocabulary_model.g.dart';
 class VocabularyModel with _$VocabularyModel {
   const factory VocabularyModel({
     required String word,
-    required String synonym,
+    String? synonym,
     required String meaning,
-    @JsonKey(name: 'related_words') required List<String> relatedWords,
-    @JsonKey(name: 'story_title') required String storyTitle,
-    @JsonKey(name: 'created_at') required String createdAt,
+    @JsonKey(name: 'related_words') List<String>? relatedWords,
+    @JsonKey(name: 'story_title') String? storyTitle,
+    @JsonKey(name: 'created_at') String? createdAt,
   }) = _VocabularyModel;
 
   factory VocabularyModel.fromJson(Map<String, dynamic> json) =>

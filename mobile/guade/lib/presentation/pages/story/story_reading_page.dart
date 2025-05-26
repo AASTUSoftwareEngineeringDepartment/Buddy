@@ -149,7 +149,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => VocabularyQuizPage(
-          questions: _vocabularyQuestions,
+          storyId: widget.story.storyId,
           storyTitle: widget.story.title,
         ),
       ),

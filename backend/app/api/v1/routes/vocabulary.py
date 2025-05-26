@@ -63,42 +63,50 @@ async def get_story_vocabulary(
     """
     try:
         user_id, user_role = current_user
+        db = MongoDB.get_db()
         
-        # Get vocabulary words for the story
-        vocabulary_words = await vocabulary_service.get_vocabulary_words_by_story(story_id)
-        
+        # First get the story to verify ownership
+        story = await db["stories"].find_one({"story_id": story_id})
+        if not story:
+            raise HTTPException(
+                status_code=404,
+                detail="Story not found"
+            )
+            
         # If user is a child, verify the story belongs to them
         if user_role == UserRole.CHILD:
-            if not any(word.child_id == user_id for word in vocabulary_words):
+            if story["child_id"] != user_id:
                 raise HTTPException(
                     status_code=403,
                     detail="Not authorized to access this story's vocabulary"
                 )
         # If user is a parent, verify they have access to the child's story
         elif user_role == UserRole.PARENT:
-            db = MongoDB.get_db()
-            # Get the child_id from the first vocabulary word
-            if vocabulary_words:
-                child_id = vocabulary_words[0].child_id
-                # Verify parent-child relationship
-                child = await db["children"].find_one({
-                    "child_id": child_id,
-                    "parent_id": user_id
-                })
-                if not child:
-                    raise HTTPException(
-                        status_code=403,
-                        detail="Not authorized to access this story's vocabulary"
-                    )
+            # Verify parent-child relationship
+            child = await db["children"].find_one({
+                "child_id": story["child_id"],
+                "parent_id": user_id
+            })
+            if not child:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Not authorized to access this story's vocabulary"
+                )
+        
+        # Get vocabulary words for the story
+        vocabulary_words = await vocabulary_service.get_vocabulary_words_by_story(story_id)
+        
+        # Log the results for debugging
+        logger.info(f"Found {len(vocabulary_words)} vocabulary words for story {story_id}")
         
         return [
             VocabularyResponse(
-                word=word.word,
-                synonym=word.synonym,
-                meaning=word.meaning,
-                related_words=word.related_words,
-                story_title=word.story_title,
-                created_at=word.created_at
+                word=word["word"],
+                synonym=word["synonym"],
+                meaning=word.get("meaning", ""),  # Handle optional meaning field
+                related_words=word["related_words"],
+                story_title=word["story_title"],
+                created_at=word["created_at"]
             )
             for word in vocabulary_words
         ]

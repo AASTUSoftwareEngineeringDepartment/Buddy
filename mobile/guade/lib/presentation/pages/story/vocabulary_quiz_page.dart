@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:dio/dio.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/models/vocabulary_model.dart';
+import '../../../data/repositories/vocabulary_repository.dart';
+import '../../blocs/auth/auth_bloc.dart';
+import '../../blocs/auth/auth_state.dart';
 
 class VocabularyQuizPage extends StatefulWidget {
-  final List<Map<String, dynamic>> questions;
+  final String storyId;
   final String storyTitle;
 
   const VocabularyQuizPage({
     super.key,
-    required this.questions,
+    required this.storyId,
     required this.storyTitle,
   });
 
@@ -18,27 +24,103 @@ class VocabularyQuizPage extends StatefulWidget {
 }
 
 class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
+  late final VocabularyRepository _vocabularyRepository;
+  List<VocabularyModel> _vocabularies = [];
+  bool _isLoading = true;
   int _currentQuestionIndex = 0;
   int _score = 0;
   bool _hasAnswered = false;
   String? _selectedAnswer;
+  final Map<int, List<String>> _answerOptions = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _vocabularyRepository = VocabularyRepository(Dio());
+    _loadVocabularies();
+  }
+
+  Future<void> _loadVocabularies() async {
+    try {
+      final authState = context.read<AuthBloc>().state;
+      String? accessToken;
+      if (authState is AuthAuthenticated) {
+        accessToken = authState.response.accessToken;
+      }
+
+      if (accessToken == null) {
+        throw Exception('Not authenticated. Please login again.');
+      }
+
+      final vocabularies = await _vocabularyRepository.getVocabulariesByStoryId(
+        widget.storyId,
+        accessToken: accessToken,
+      );
+
+      // Remove duplicates based on word
+      final uniqueVocabularies = vocabularies.fold<List<VocabularyModel>>([], (
+        unique,
+        vocabulary,
+      ) {
+        if (!unique.any((v) => v.word == vocabulary.word)) {
+          unique.add(vocabulary);
+        }
+        return unique;
+      });
+
+      if (mounted) {
+        setState(() {
+          _vocabularies = uniqueVocabularies;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading vocabularies: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading vocabularies: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
 
   void _answerQuestion(String selectedAnswer) {
     if (_hasAnswered) return;
 
+    final currentVocabulary = _vocabularies[_currentQuestionIndex];
+    final isCorrect = selectedAnswer == currentVocabulary.synonym;
+
     setState(() {
       _selectedAnswer = selectedAnswer;
       _hasAnswered = true;
-      if (selectedAnswer ==
-          widget.questions[_currentQuestionIndex]['correctAnswer']) {
+      if (isCorrect) {
         _score++;
       }
     });
 
-    // Show feedback and move to next question after a delay
+    // Show feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isCorrect
+              ? 'Correct! Well done!'
+              : 'Incorrect. The synonym is: ${currentVocabulary.synonym}',
+        ),
+        backgroundColor: isCorrect ? AppColors.accent1 : AppColors.error,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    // Move to next question after delay
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
-        if (_currentQuestionIndex < widget.questions.length - 1) {
+        if (_currentQuestionIndex < _vocabularies.length - 1) {
           setState(() {
             _currentQuestionIndex++;
             _hasAnswered = false;
@@ -49,6 +131,52 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
         }
       }
     });
+  }
+
+  List<String> _getAnswerOptions(VocabularyModel vocabulary) {
+    if (_answerOptions.containsKey(_currentQuestionIndex)) {
+      return _answerOptions[_currentQuestionIndex]!;
+    }
+
+    final options = <String>{};
+
+    // Add the correct answer (synonym)
+    if (vocabulary.synonym != null) {
+      options.add(vocabulary.synonym!);
+    }
+
+    // Add related words as other options
+    if (vocabulary.relatedWords != null &&
+        vocabulary.relatedWords!.isNotEmpty) {
+      final shuffledRelatedWords = List<String>.from(vocabulary.relatedWords!)
+        ..shuffle();
+
+      // Add related words until we have 4 options total
+      for (final word in shuffledRelatedWords) {
+        if (options.length < 4) {
+          options.add(word);
+        } else {
+          break;
+        }
+      }
+    }
+
+    // If we still don't have 4 options, add some generic options
+    final genericOptions = ['similar', 'alike', 'matching', 'comparable'];
+    while (options.length < 4) {
+      final randomOption = genericOptions[options.length - 1];
+      if (!options.contains(randomOption)) {
+        options.add(randomOption);
+      }
+    }
+
+    // Convert to list and shuffle
+    final optionsList = options.toList()..shuffle();
+
+    // Store the options for this question
+    _answerOptions[_currentQuestionIndex] = optionsList;
+
+    return optionsList;
   }
 
   void _showResults() {
@@ -63,13 +191,13 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
               _score >= 3
                   ? PhosphorIcons.star(PhosphorIconsStyle.fill)
                   : PhosphorIcons.star(),
-              color: _score >= 3 ? Colors.amber : Colors.grey,
+              color: _score >= 3 ? AppColors.accent1 : AppColors.textSecondary,
               size: 32,
             ),
             const SizedBox(width: 12),
             Text(
               'Great Job!',
-              style: AppTextStyles.heading2.copyWith(color: AppColors.accent1),
+              style: AppTextStyles.heading2.copyWith(color: AppColors.primary),
             ),
           ],
         ),
@@ -77,7 +205,7 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'You got $_score out of ${widget.questions.length} correct!',
+              'You got $_score out of ${_vocabularies.length} correct!',
               style: AppTextStyles.body1,
             ),
             const SizedBox(height: 16),
@@ -101,7 +229,7 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
             },
             child: Text(
               'Back to Story',
-              style: TextStyle(color: AppColors.accent1),
+              style: TextStyle(color: AppColors.primary),
             ),
           ),
         ],
@@ -111,7 +239,141 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentQuestion = widget.questions[_currentQuestionIndex];
+    if (_isLoading) {
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.primary.withOpacity(0.1),
+                AppColors.primary.withOpacity(0.05),
+                Colors.white,
+              ],
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Loading vocabulary quiz...',
+                  style: AppTextStyles.body1.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_vocabularies.isEmpty) {
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppColors.primary.withOpacity(0.1),
+                AppColors.primary.withOpacity(0.05),
+                Colors.white,
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        PhosphorIcons.bookOpen(),
+                        size: 64,
+                        color: AppColors.primary.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'No Vocabulary Quiz Available',
+                      style: AppTextStyles.heading2.copyWith(
+                        color: AppColors.primary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'This story doesn\'t have any vocabulary words to quiz you on yet.',
+                      style: AppTextStyles.body1.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: Icon(PhosphorIcons.arrowLeft()),
+                      label: const Text('Back to Story'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final currentQuestion = _vocabularies[_currentQuestionIndex];
 
     return Scaffold(
       body: Container(
@@ -120,8 +382,8 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.accent2.withOpacity(0.1),
-              AppColors.accent2.withOpacity(0.05),
+              AppColors.primary.withOpacity(0.1),
+              AppColors.primary.withOpacity(0.05),
               Colors.white,
             ],
           ),
@@ -136,7 +398,7 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.accent2.withOpacity(0.1),
+                      color: AppColors.primary.withOpacity(0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -147,7 +409,7 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
                     IconButton(
                       icon: Icon(
                         PhosphorIcons.arrowLeft(),
-                        color: AppColors.accent2,
+                        color: AppColors.primary,
                       ),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
@@ -159,7 +421,7 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
                           Text(
                             'Vocabulary Quiz',
                             style: AppTextStyles.heading3.copyWith(
-                              color: AppColors.accent2,
+                              color: AppColors.primary,
                             ),
                           ),
                           Text(
@@ -177,13 +439,13 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.accent2.withOpacity(0.1),
+                        color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
-                        '${_currentQuestionIndex + 1}/${widget.questions.length}',
+                        '${_currentQuestionIndex + 1}/${_vocabularies.length}',
                         style: AppTextStyles.body2.copyWith(
-                          color: AppColors.accent2,
+                          color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -194,9 +456,9 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
 
               // Progress Bar
               LinearProgressIndicator(
-                value: (_currentQuestionIndex + 1) / widget.questions.length,
-                backgroundColor: AppColors.accent2.withOpacity(0.1),
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent2),
+                value: (_currentQuestionIndex + 1) / _vocabularies.length,
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 minHeight: 4,
               ),
 
@@ -211,21 +473,21 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.accent2.withOpacity(0.1),
+                          color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               PhosphorIcons.question(PhosphorIconsStyle.fill),
-                              color: AppColors.accent2,
+                              color: AppColors.primary,
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'What does this word mean?',
+                                'What is the synonym for this word?',
                                 style: AppTextStyles.body1.copyWith(
-                                  color: AppColors.accent2,
+                                  color: AppColors.primary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -242,21 +504,21 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              AppColors.accent2,
-                              AppColors.accent2.withOpacity(0.8),
+                              AppColors.primary,
+                              AppColors.primary.withOpacity(0.8),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.accent2.withOpacity(0.3),
+                              color: AppColors.primary.withOpacity(0.3),
                               blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),
                           ],
                         ),
                         child: Text(
-                          currentQuestion['word'],
+                          currentQuestion.word,
                           style: AppTextStyles.heading2.copyWith(
                             color: Colors.white,
                             fontSize: 36,
@@ -267,15 +529,64 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
                       const SizedBox(height: 32),
 
                       // Answer Options
-                      ...(currentQuestion['options'] as List<String>).map(
-                        (option) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildAnswerButton(
-                            option,
-                            currentQuestion['correctAnswer'],
+                      ...(_getAnswerOptions(currentQuestion))
+                          .map(
+                            (option) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildAnswerButton(
+                                option,
+                                currentQuestion.synonym ?? '',
+                              ),
+                            ),
+                          )
+                          .toList(),
+
+                      // Word Meaning Section
+                      if (_hasAnswered) ...[
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.primary.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    PhosphorIcons.lightbulb(
+                                      PhosphorIconsStyle.fill,
+                                    ),
+                                    color: AppColors.primary,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Word Meaning',
+                                    style: AppTextStyles.body1.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                currentQuestion.meaning,
+                                style: AppTextStyles.body2.copyWith(
+                                  color: AppColors.textPrimary,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -291,20 +602,20 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
     final isSelected = _selectedAnswer == option;
     final isCorrect = option == correctAnswer;
     Color backgroundColor = Colors.white;
-    Color borderColor = AppColors.accent2.withOpacity(0.3);
+    Color borderColor = AppColors.primary.withOpacity(0.3);
     Color textColor = AppColors.textPrimary;
 
     if (_hasAnswered) {
       if (isSelected) {
         backgroundColor = isCorrect
-            ? AppColors.accent1.withOpacity(0.2)
-            : AppColors.error.withOpacity(0.2);
-        borderColor = isCorrect ? AppColors.accent1 : AppColors.error;
-        textColor = isCorrect ? AppColors.accent1 : AppColors.error;
+            ? Colors.green.withOpacity(0.2)
+            : Colors.red.withOpacity(0.2);
+        borderColor = isCorrect ? Colors.green : Colors.red;
+        textColor = isCorrect ? Colors.green : Colors.red;
       } else if (isCorrect) {
-        backgroundColor = AppColors.accent1.withOpacity(0.2);
-        borderColor = AppColors.accent1;
-        textColor = AppColors.accent1;
+        backgroundColor = Colors.green.withOpacity(0.2);
+        borderColor = Colors.green;
+        textColor = Colors.green;
       }
     }
 
@@ -327,7 +638,7 @@ class _VocabularyQuizPageState extends State<VocabularyQuizPage> {
               isCorrect
                   ? PhosphorIcons.checkCircle(PhosphorIconsStyle.fill)
                   : PhosphorIcons.xCircle(PhosphorIconsStyle.fill),
-              color: isCorrect ? AppColors.accent1 : AppColors.error,
+              color: isCorrect ? Colors.green : Colors.red,
             ),
           if (_hasAnswered && isSelected) const SizedBox(width: 12),
           Expanded(

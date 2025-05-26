@@ -23,6 +23,7 @@ import 'presentation/pages/onboarding/onboarding_page.dart';
 import 'presentation/pages/reward/reward_test_page.dart';
 import 'presentation/pages/vocabulary/vocabulary_page.dart';
 import 'presentation/layouts/main_layout.dart';
+import 'package:dio/dio.dart';
 
 final getIt = GetIt.instance;
 
@@ -43,7 +44,7 @@ Future<void> initializeDependencies() async {
   getIt.registerLazySingleton<AuthRepository>(() => AuthRepository());
   getIt.registerLazySingleton<RewardRepository>(() => RewardRepository());
   getIt.registerLazySingleton<VocabularyRepository>(
-    () => VocabularyRepository(),
+    () => VocabularyRepository(Dio()),
   );
   getIt.registerLazySingleton<StoryRepository>(() => StoryRepository());
 

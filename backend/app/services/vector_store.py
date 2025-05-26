@@ -4,6 +4,9 @@ from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Optional
 from app.models.science_qa import TextChunk
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class VectorStore:
     def __init__(self, persist_directory: str = "chroma_db"):
@@ -16,7 +19,30 @@ class VectorStore:
             name="science_books",
             metadata={"hnsw:space": "cosine"}
         )
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        
+        # Initialize the embedding model with error handling
+        try:
+            # Try to load the model from cache first
+            cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "torch", "sentence_transformers")
+            os.makedirs(cache_dir, exist_ok=True)
+            
+            self.embedding_model = SentenceTransformer(
+                'all-MiniLM-L6-v2',
+                cache_folder=cache_dir
+            )
+            logger.info("Successfully initialized SentenceTransformer model")
+        except Exception as e:
+            logger.error(f"Failed to initialize SentenceTransformer model: {str(e)}")
+            # Fallback to a simpler model if the main one fails
+            try:
+                self.embedding_model = SentenceTransformer(
+                    'paraphrase-MiniLM-L3-v2',
+                    cache_folder=cache_dir
+                )
+                logger.info("Successfully initialized fallback SentenceTransformer model")
+            except Exception as e:
+                logger.error(f"Failed to initialize fallback model: {str(e)}")
+                raise ValueError("Failed to initialize any embedding model")
 
     def add_chunks(self, chunks: List[TextChunk]):
         """Add text chunks to the vector store."""
