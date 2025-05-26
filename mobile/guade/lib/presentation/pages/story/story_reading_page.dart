@@ -32,6 +32,11 @@ class _StoryReadingPageState extends State<StoryReadingPage>
   List<String> _words = [];
   Timer? _wordTimer;
   bool _isDarkMode = false;
+  bool _isTestActive = false;
+  int _currentQuestionIndex = 0;
+  int _score = 0;
+  List<Map<String, dynamic>> _vocabularyQuestions = [];
+  bool _isStoryCompleted = false;
 
   @override
   void initState() {
@@ -53,6 +58,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
     _scrollController.addListener(_onScroll);
     _initializeTts();
     _words = widget.story.storyBody.split(' ');
+    _prepareVocabularyTest();
   }
 
   Future<void> _initializeTts() async {
@@ -68,7 +74,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
       return;
     }
 
-    setState(() {
+        setState(() {
       _isPlaying = true;
       _currentWordIndex = 0;
     });
@@ -118,6 +124,124 @@ class _StoryReadingPageState extends State<StoryReadingPage>
     });
   }
 
+  void _prepareVocabularyTest() {
+    // Filter words that are longer than 4 characters to get meaningful vocabulary
+    final vocabularyWords = _words.where((word) => word.length > 4).toList();
+    // Take up to 5 random words for the test
+    vocabularyWords.shuffle();
+    final selectedWords = vocabularyWords.take(5).toList();
+
+    _vocabularyQuestions = selectedWords.map((word) {
+      // Create multiple choice options
+      final options = List<String>.from(vocabularyWords)
+        ..remove(word)
+        ..shuffle()
+        ..take(3)
+        ..add(word)
+        ..shuffle();
+
+      return {'word': word, 'options': options, 'correctAnswer': word};
+    }).toList();
+  }
+
+  void _startVocabularyTest() {
+    setState(() {
+      _isTestActive = true;
+      _currentQuestionIndex = 0;
+      _score = 0;
+    });
+  }
+
+  void _answerQuestion(String selectedAnswer) {
+    final currentQuestion = _vocabularyQuestions[_currentQuestionIndex];
+    if (selectedAnswer == currentQuestion['correctAnswer']) {
+      _score++;
+    }
+
+    if (_currentQuestionIndex < _vocabularyQuestions.length - 1) {
+      setState(() {
+        _currentQuestionIndex++;
+      });
+    } else {
+      _showTestResults();
+    }
+  }
+
+  void _showTestResults() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Icon(
+              _score >= 3
+                  ? PhosphorIcons.star(PhosphorIconsStyle.fill)
+                  : PhosphorIcons.star(),
+              color: _score >= 3 ? Colors.amber : Colors.grey,
+              size: 32,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Great Job!',
+              style: AppTextStyles.heading2.copyWith(color: AppColors.accent1),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'You got $_score out of ${_vocabularyQuestions.length} correct!',
+              style: AppTextStyles.body1,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _score >= 3
+                  ? '🌟 Amazing! You\'re a vocabulary star! 🌟'
+                  : 'Keep practicing! You\'re getting better! 💪',
+              style: AppTextStyles.body2.copyWith(
+                color: AppColors.accent2,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+    setState(() {
+                _isTestActive = false;
+              });
+            },
+            child: Text(
+              'Try Again',
+              style: TextStyle(color: AppColors.accent1),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              setState(() {
+                _isTestActive = false;
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Continue Reading'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _wordTimer?.cancel();
@@ -138,6 +262,16 @@ class _StoryReadingPageState extends State<StoryReadingPage>
       }
     }
     _lastScrollPosition = _scrollController.position.pixels;
+
+    // Check if user has reached the end of the story
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 100) {
+      if (!_isStoryCompleted) {
+    setState(() {
+          _isStoryCompleted = true;
+        });
+      }
+    }
   }
 
   void _toggleDarkMode() {
@@ -165,8 +299,8 @@ class _StoryReadingPageState extends State<StoryReadingPage>
           ),
         ),
         child: SafeArea(
-          child: Stack(
-            children: [
+        child: Stack(
+          children: [
               // Main Content
               AnimatedBuilder(
                 animation: _animationController,
@@ -221,7 +355,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                               padding: const EdgeInsets.all(24),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
+        children: [
                                   // Story Title
                                   Text(
                                     widget.story.title,
@@ -249,12 +383,12 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                           index == _currentWordIndex;
                                       final isRead = index < _currentWordIndex;
 
-                                      return Container(
+              return Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 6,
                                           vertical: 4,
                                         ),
-                                        decoration: BoxDecoration(
+                decoration: BoxDecoration(
                                           color: isCurrentWord
                                               ? AppColors.accent3.withOpacity(
                                                   0.3,
@@ -290,16 +424,277 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                                         ),
                                       );
                                     }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+                          ),
+
+                          // Story Completion Section
+                          if (_isStoryCompleted && !_isTestActive)
+                            SliverToBoxAdapter(
+            child: Container(
+                                margin: const EdgeInsets.all(24),
+                                padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                                      AppColors.accent1.withOpacity(0.1),
+                                      AppColors.accent1.withOpacity(0.05),
+                                    ],
                                   ),
-                                ],
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color: AppColors.accent1.withOpacity(0.3),
+                                  ),
+                                ),
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Celebration Animation
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                                          color: AppColors.accent1.withOpacity(
+                                            0.1,
+                                          ),
+                  shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          PhosphorIcons.star(
+                                            PhosphorIconsStyle.fill,
+                                          ),
+                                          color: AppColors.accent1,
+                                          size: 48,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Text(
+                                        '🎉 Amazing! You finished the story! 🎉',
+                                        style: AppTextStyles.heading2.copyWith(
+                                          color: AppColors.accent1,
+                                          fontSize: 24,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Let\'s play a fun word game!',
+                                        style: AppTextStyles.body1.copyWith(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 16,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Test your vocabulary and earn stars!',
+                                        style: AppTextStyles.body2.copyWith(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 14,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 24),
+                                      // Playful Quiz Button
+                    Container(
+                                        width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                                            colors: [
+                                              AppColors.accent1,
+                                              AppColors.accent1.withOpacity(
+                                                0.8,
+                                              ),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                                              color: AppColors.accent1
+                                                  .withOpacity(0.3),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 6),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            onTap: _startVocabularyTest,
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                      ),
+                      child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 24,
+                                                    vertical: 16,
+                                                  ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    PhosphorIcons.star(
+                                                      PhosphorIconsStyle.fill,
+                                                    ),
+                                                    color: Colors.white,
+                                                    size: 24,
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Flexible(
+                      child: Text(
+                                                      'Let\'s Play Word Game!',
+                                                      style: AppTextStyles
+                                                          .heading3
+                                                          .copyWith(
+                          color: Colors.white,
+                                                            fontSize: 18,
+                                                          ),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Icon(
+                                                    PhosphorIcons.arrowRight(),
+                                                    color: Colors.white,
+                                                    size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        '🌟 Earn stars for each correct answer! 🌟',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.accent1.withOpacity(
+                                            0.8,
+                                          ),
+                                          fontSize: 12,
+                                        ),
+                                        textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+
+                          // Vocabulary Test Section
+                          if (_isTestActive)
+                            SliverToBoxAdapter(
+              child: Container(
+                                margin: const EdgeInsets.all(24),
+                                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                                      AppColors.accent2.withOpacity(0.1),
+                                      AppColors.accent2.withOpacity(0.05),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                                    color: AppColors.accent2.withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                                          PhosphorIcons.star(
+                                            PhosphorIconsStyle.fill,
+                                          ),
+                                          color: AppColors.accent2,
+                        ),
+                        const SizedBox(width: 8),
+                                        Text(
+                                          'Vocabulary Quiz',
+                                          style: AppTextStyles.heading3
+                                              .copyWith(
+                          color: AppColors.accent2,
+                                              ),
+                        ),
+                      ],
+                    ),
+                                    const SizedBox(height: 16),
+                    Text(
+                                      'Question ${_currentQuestionIndex + 1}/${_vocabularyQuestions.length}',
+                                      style: AppTextStyles.body2.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'What does this word mean?',
+                                      style: AppTextStyles.body1.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      _vocabularyQuestions[_currentQuestionIndex]['word'],
+                                      style: AppTextStyles.heading2.copyWith(
+                                        color: AppColors.accent2,
+                                        fontSize: 32,
+                                      ),
+                                    ),
+                    const SizedBox(height: 24),
+                                    ...(_vocabularyQuestions[_currentQuestionIndex]['options']
+                                            as List<String>)
+                                        .map(
+                                          (option) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 12,
+                                            ),
+                                            child: ElevatedButton(
+                                              onPressed: () =>
+                                                  _answerQuestion(option),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.white,
+                                                foregroundColor:
+                                                    AppColors.textPrimary,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 24,
+                                                      vertical: 16,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  side: BorderSide(
+                                                    color: AppColors.accent2
+                                                        .withOpacity(0.3),
+                                                  ),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                option,
+                                                style: AppTextStyles.body1,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                  ],
+                                ),
                       ),
                     ),
-                  );
-                },
+                  ],
+                ),
+              ),
+            );
+          },
               ),
 
               // Interactive Elements
@@ -319,158 +714,119 @@ class _StoryReadingPageState extends State<StoryReadingPage>
   }
 
   Widget _buildStoryHeader() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.accent3.withOpacity(0.2),
-            AppColors.accent3.withOpacity(0.1),
-          ],
-        ),
-      ),
-      child: Stack(
-        children: [
-          // Background Pattern
+    return Stack(
+      children: [
+        // Background Image
+        if (widget.story.imageUrl != null && widget.story.imageUrl!.isNotEmpty)
           Positioned.fill(
-            child: CustomPaint(
-              painter: _StoryPatternPainter(
-                color: AppColors.accent3.withOpacity(0.1),
-              ),
+            child: Image.network(
+              widget.story.imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Image.asset(
+                  'assets/images/story-bg.png',
+                  fit: BoxFit.cover,
+                );
+              },
             ),
+          )
+        else
+          Positioned.fill(
+            child: Image.asset('assets/images/story-bg.png', fit: BoxFit.cover),
           ),
 
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Story Image with Enhanced Display
-                if (widget.story.imageUrl != null &&
-                    widget.story.imageUrl!.isNotEmpty)
-                  Container(
-                    width: 240,
-                    height: 240,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.accent3.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.8),
-                          blurRadius: 10,
-                          offset: const Offset(-5, -5),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: Image.network(
-                            widget.story.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Image.asset(
-                                'assets/images/story-bg.png',
-                                fit: BoxFit.cover,
-                              );
-                            },
+        // Gradient Overlay
+        Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+                  Colors.black.withOpacity(0.7),
+                  Colors.black.withOpacity(0.5),
+              Colors.black.withOpacity(0.3),
+            ],
+          ),
+        ),
+          ),
+        ),
+
+        // Content
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Story Category Badge with Enhanced Design
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.accent1.withOpacity(0.2),
+                      AppColors.accent1.withOpacity(0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.accent1.withOpacity(0.3),
+                    width: 1,
+                  ),
+                        boxShadow: [
+                          BoxShadow(
+                      color: AppColors.accent1.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
                           ),
-                        ),
-                        // Decorative Border
-                        Positioned.fill(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.5),
-                                width: 2,
-                              ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                      PhosphorIcons.sparkle(PhosphorIconsStyle.fill),
+                            size: 16,
+                      color: AppColors.accent1,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                      'Adventure Story',
+                      style: AppTextStyles.body2.copyWith(
+                        color: AppColors.accent1,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                const SizedBox(height: 16),
-
-                // Story Category Badge with Enhanced Design
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.accent1.withOpacity(0.2),
-                        AppColors.accent1.withOpacity(0.1),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.accent1.withOpacity(0.3),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accent1.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        PhosphorIcons.sparkle(PhosphorIconsStyle.fill),
-                        size: 16,
-                        color: AppColors.accent1,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Adventure Story',
-                        style: AppTextStyles.body2.copyWith(
-                          color: AppColors.accent1,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
+              ),
+            ],
     );
   }
 
   Widget _buildInteractiveControls() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+            decoration: BoxDecoration(
         color: _isDarkMode
             ? Colors.grey[900]!.withOpacity(0.95)
             : Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
+              boxShadow: [
+                BoxShadow(
             color: AppColors.accent3.withOpacity(0.2),
-            blurRadius: 20,
+                  blurRadius: 20,
             offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+                  ),
+              ],
+            ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -515,10 +871,10 @@ class _StoryReadingPageState extends State<StoryReadingPage>
                         },
                       ),
                     ],
-                  ),
-                ),
-              );
-            },
+            ),
+          ),
+        );
+      },
           ),
           _buildControlButton(
             icon: _isDarkMode ? PhosphorIcons.sun() : PhosphorIcons.moon(),
@@ -543,11 +899,11 @@ class _StoryReadingPageState extends State<StoryReadingPage>
     return GestureDetector(
       onTap: onTap,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
+          decoration: BoxDecoration(
               color: _isDarkMode
                   ? Colors.grey[800]
                   : AppColors.accent3.withOpacity(0.1),
@@ -560,16 +916,16 @@ class _StoryReadingPageState extends State<StoryReadingPage>
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
               color: _isDarkMode
                   ? Colors.white.withOpacity(0.7)
                   : AppColors.textSecondary,
-              fontSize: 12,
-            ),
+            fontSize: 12,
           ),
-        ],
+        ),
+      ],
       ),
     );
   }
