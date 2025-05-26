@@ -160,30 +160,9 @@ class _VocabularyViewState extends State<_VocabularyView> {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          // Header with back button and title
+          // Header with title and search button (back button removed)
           Row(
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: Icon(
-                    PhosphorIcons.arrowLeft(),
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -745,7 +724,6 @@ class _VocabularyCard extends StatefulWidget {
 class _VocabularyCardState extends State<_VocabularyCard>
     with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
-  bool _isRelatedWordsExpanded = false;
   bool _isSpeaking = false;
   late AnimationController _animationController;
   late Animation<double> _expandAnimation;
@@ -778,15 +756,7 @@ class _VocabularyCardState extends State<_VocabularyCard>
         _animationController.forward();
       } else {
         _animationController.reverse();
-        // Reset related words expansion when collapsing main card
-        _isRelatedWordsExpanded = false;
       }
-    });
-  }
-
-  void _toggleRelatedWordsExpanded() {
-    setState(() {
-      _isRelatedWordsExpanded = !_isRelatedWordsExpanded;
     });
   }
 
@@ -1046,162 +1016,6 @@ class _VocabularyCardState extends State<_VocabularyCard>
                         widget.vocabulary.synonym,
                         PhosphorIcons.equals(),
                         AppColors.accent1,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Related Words Section with its own Expand/Collapse
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.accent2.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.accent2.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            // Header with expand/collapse button for related words
-                            InkWell(
-                              onTap: _toggleRelatedWordsExpanded,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      PhosphorIcons.link(),
-                                      size: 14,
-                                      color: AppColors.accent2,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Related Words',
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: AppColors.accent2,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.accent2.withOpacity(
-                                          0.2,
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        '${widget.vocabulary.relatedWords.length}',
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: AppColors.accent2,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    AnimatedRotation(
-                                      turns: _isRelatedWordsExpanded ? 0.5 : 0,
-                                      duration: const Duration(
-                                        milliseconds: 300,
-                                      ),
-                                      child: Icon(
-                                        PhosphorIcons.caretDown(),
-                                        size: 16,
-                                        color: AppColors.accent2,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // Expandable related words content
-                            AnimatedCrossFade(
-                              duration: const Duration(milliseconds: 300),
-                              crossFadeState: _isRelatedWordsExpanded
-                                  ? CrossFadeState.showSecond
-                                  : CrossFadeState.showFirst,
-                              firstChild: const SizedBox.shrink(),
-                              secondChild: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.fromLTRB(
-                                  12,
-                                  0,
-                                  12,
-                                  12,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Divider(
-                                      color: AppColors.accent2,
-                                      thickness: 0.5,
-                                      height: 1,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    if (widget
-                                        .vocabulary
-                                        .relatedWords
-                                        .isNotEmpty) ...[
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: widget.vocabulary.relatedWords
-                                            .map(
-                                              (word) => Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 6,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.accent2
-                                                      .withOpacity(0.15),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  border: Border.all(
-                                                    color: AppColors.accent2
-                                                        .withOpacity(0.3),
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  word,
-                                                  style: AppTextStyles.body2
-                                                      .copyWith(
-                                                        color: AppColors
-                                                            .textPrimary,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                        fontSize: 12,
-                                                      ),
-                                                ),
-                                              ),
-                                            )
-                                            .toList(),
-                                      ),
-                                    ] else ...[
-                                      Text(
-                                        'No related words available',
-                                        style: AppTextStyles.body2.copyWith(
-                                          color: AppColors.textSecondary,
-                                          fontStyle: FontStyle.italic,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                     ],
                   ),

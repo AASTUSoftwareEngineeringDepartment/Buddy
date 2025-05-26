@@ -1038,7 +1038,7 @@ class _CreativeProfileView extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () => _showLogoutDialog(context),
               icon: Icon(PhosphorIcons.signOut()),
-              label: const Text('Logout from Learning Adventure'),
+              label: const Text('Logout'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
