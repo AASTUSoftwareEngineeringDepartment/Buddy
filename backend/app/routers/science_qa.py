@@ -99,8 +99,51 @@ def get_question_schema():
         "additionalProperties": False
     }
 
-def get_system_instruction(age_range: str, difficulty_level: str) -> str:
-    return f"""You are a science question generator for children aged {age_range} years old.
+def get_system_instruction(age_range: str, difficulty_level: str, topic: str = None) -> str:
+    if topic and topic.lower() == "english":
+        return f"""You are an English grammar question generator for children aged {age_range} years old.
+Your task is to create engaging and educational multiple-choice grammar questions that are {difficulty_level} difficulty level.
+
+Follow these rules:
+1. Keep questions simple and clear
+2. Use age-appropriate vocabulary
+3. Include a fun analogy or comparison
+4. Make it engaging and interactive
+5. Create 4 multiple-choice options:
+   - One correct answer
+   - Three plausible but incorrect answers
+   - All options should be similar in length
+   - Avoid obviously wrong answers
+6. Format the response as JSON with 'question', 'options', 'correct_option_index', and 'explanation' fields
+7. Keep the answer concise but informative
+8. Use examples that children can relate to
+9. Focus on grammar concepts like:
+   - Parts of speech (nouns, verbs, adjectives, etc.)
+   - Sentence structure
+   - Punctuation
+   - Subject-verb agreement
+   - Tenses
+   - Articles
+   - Prepositions
+   - Pronouns
+10. Make it fun and interesting
+11. Provide a short, simple explanation of why the correct answer is right
+12. Make the explanation age-appropriate and easy to understand
+
+Example response format:
+{{
+    "question": "Which sentence uses the correct punctuation?",
+    "options": [
+        "The cat sat on the mat.",
+        "The cat sat on the mat",
+        "The cat sat on the mat!",
+        "The cat sat on the mat,"
+    ],
+    "correct_option_index": 0,
+    "explanation": "A simple statement ends with a period (.), just like when we finish telling someone something!"
+}}"""
+    else:
+        return f"""You are a science question generator for children aged {age_range} years old.
 Your task is to create engaging and educational multiple-choice science questions that are {difficulty_level} difficulty level.
 
 Follow these rules:
@@ -208,11 +251,39 @@ async def generate_question(
         difficulty_level = request.get_difficulty_level(reward.level)
         
         # Get the system instruction and schema
-        system_instruction = get_system_instruction(age_range, difficulty_level)
+        system_instruction = get_system_instruction(age_range, difficulty_level, request.topic)
         response_schema = get_question_schema()
         
         # Create the prompt
-        prompt = f"""{system_instruction}
+        if request.topic and request.topic.lower() == "english":
+            prompt = f"""{system_instruction}
+
+Generate a grammar question that is:
+- Age-appropriate for {age_range} years old
+- {difficulty_level} difficulty level
+- Fun and engaging
+- Educational and clear
+- Have 4 multiple-choice options
+- One correct answer and three plausible but incorrect answers
+
+The question should focus on grammar concepts like:
+- Parts of speech (nouns, verbs, adjectives, etc.)
+- Sentence structure
+- Punctuation
+- Subject-verb agreement
+- Tenses
+- Articles
+- Prepositions
+- Pronouns
+
+Make sure to:
+- Use age-appropriate vocabulary
+- Include clear examples
+- Make the explanation simple and easy to understand
+- Keep the question engaging and fun
+"""
+        else:
+            prompt = f"""{system_instruction}
 
 Based on this science text, generate a multiple-choice question with 4 options:
 
