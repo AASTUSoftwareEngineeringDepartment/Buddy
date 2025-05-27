@@ -188,279 +188,282 @@ class _CreativeProfileView extends StatelessWidget {
     );
   }
 
- Widget _buildProfileHeader(profile, reward) {
-  return SingleChildScrollView(
-    child: Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Modern Mascot with Glassmorphism Level Ring
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              // Outer glow effect
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.accent1.withOpacity(0.3),
-                      AppColors.accent1.withOpacity(0.1),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-              // Glassmorphism Level Ring
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.accent1.withOpacity(0.8),
-                      AppColors.accent1.withOpacity(0.6),
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accent1.withOpacity(0.4),
-                      blurRadius: 15,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Container(
-                  margin: const EdgeInsets.all(3),
+  Widget _buildProfileHeader(profile, reward) {
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Modern Mascot with Glassmorphism Level Ring
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Outer glow effect
+                Container(
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.9),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.5),
-                      width: 1.5,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.accent1.withOpacity(0.3),
+                        AppColors.accent1.withOpacity(0.1),
+                        Colors.transparent,
+                      ],
                     ),
                   ),
                 ),
-              ),
-              // Enhanced Mascot Container
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primary.withOpacity(0.15),
-                      AppColors.primary.withOpacity(0.05),
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.2),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                    BoxShadow(
-                      color: Colors.white.withOpacity(0.8),
-                      blurRadius: 8,
-                      offset: const Offset(-3, -3),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Image.asset(
-                    'assets/images/puppet.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-              // Modern Level Badge with Glassmorphism
-              Positioned(
-                bottom: 3,
-                right: 3,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+                // Glassmorphism Level Ring
+                Container(
+                  width: 100,
+                  height: 100,
                   decoration: BoxDecoration(
+                    shape: BoxShape.circle,
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        AppColors.accent1,
                         AppColors.accent1.withOpacity(0.8),
+                        AppColors.accent1.withOpacity(0.6),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.accent1.withOpacity(0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
                       ),
                     ],
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1,
+                  ),
+                  child: Container(
+                    margin: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.9),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.5),
+                        width: 1.5,
+                      ),
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        PhosphorIcons.crown(PhosphorIconsStyle.fill),
-                        size: 12,
-                        color: Colors.white,
+                ),
+                // Enhanced Mascot Container
+                Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primary.withOpacity(0.15),
+                        AppColors.primary.withOpacity(0.05),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.2),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
-                      const SizedBox(width: 3),
-                      Text(
-                        'LV ${reward?.level ?? 1}',
-                        style: AppTextStyles.caption.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                        ),
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.8),
+                        blurRadius: 8,
+                        offset: const Offset(-3, -3),
                       ),
                     ],
                   ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Enhanced User Info with Modern Typography
-          Text(
-            '${profile.firstName} ${profile.lastName}',
-            style: AppTextStyles.heading2.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w800,
-              fontSize: 24,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.secondary.withOpacity(0.15),
-                  AppColors.secondary.withOpacity(0.08),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.secondary.withOpacity(0.2),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary,
-                    shape: BoxShape.circle,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Image.asset(
+                      'assets/images/puppet.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  '${profile.role.toUpperCase()} • Learning Explorer',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.secondary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
+                // Modern Level Badge with Glassmorphism
+                Positioned(
+                  bottom: 3,
+                  right: 3,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.accent1,
+                          AppColors.accent1.withOpacity(0.8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.accent1.withOpacity(0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          PhosphorIcons.crown(PhosphorIconsStyle.fill),
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          'LV ${reward?.level ?? 1}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 16),
 
-          // Enhanced XP Display with Modern Card Design
-          if (reward != null) ...[
-            const SizedBox(height: 12),
+            // Enhanced User Info with Modern Typography
+            Text(
+              '${profile.firstName} ${profile.lastName}',
+              style: AppTextStyles.heading2.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w800,
+                fontSize: 24,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                   colors: [
-                    AppColors.accent1.withOpacity(0.1),
-                    AppColors.accent1.withOpacity(0.05),
+                    AppColors.secondary.withOpacity(0.15),
+                    AppColors.secondary.withOpacity(0.08),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppColors.accent1.withOpacity(0.3),
+                  color: AppColors.secondary.withOpacity(0.2),
                   width: 1,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.accent1.withOpacity(0.1),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(5),
+                    width: 6,
+                    height: 6,
                     decoration: BoxDecoration(
-                      color: AppColors.accent1.withOpacity(0.2),
+                      color: AppColors.secondary,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      PhosphorIcons.star(PhosphorIconsStyle.fill),
-                      size: 14,
-                      color: AppColors.accent1,
-                    ),
                   ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${reward.xp} XP',
-                        style: AppTextStyles.body1.copyWith(
-                          color: AppColors.accent1,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      // Text(
-                      //   'Experience Points',
-                      //   style: AppTextStyles.caption.copyWith(
-                      //     color: AppColors.accent1.withOpacity(0.7),
-                      //     fontSize: 10,
-                      //   ),
-                      // ),
-                    ],
+                  const SizedBox(width: 6),
+                  Text(
+                    '${profile.role.toUpperCase()} • Learning Explorer',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.secondary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
             ),
+
+            // Enhanced XP Display with Modern Card Design
+            if (reward != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.accent1.withOpacity(0.1),
+                      AppColors.accent1.withOpacity(0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.accent1.withOpacity(0.3),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accent1.withOpacity(0.1),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent1.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        PhosphorIcons.star(PhosphorIconsStyle.fill),
+                        size: 14,
+                        color: AppColors.accent1,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${reward.xp} XP',
+                          style: AppTextStyles.body1.copyWith(
+                            color: AppColors.accent1,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        // Text(
+                        //   'Experience Points',
+                        //   style: AppTextStyles.caption.copyWith(
+                        //     color: AppColors.accent1.withOpacity(0.7),
+                        //     fontSize: 10,
+                        //   ),
+                        // ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildLearningJourney(reward) {
     // Calculate progress to next level (10 XP per level)
@@ -532,10 +535,10 @@ class _CreativeProfileView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-              Text(
-                'Learning Journey',
-                style: AppTextStyles.heading3.copyWith(
-                  color: AppColors.accent2,
+                    Text(
+                      'Learning Journey',
+                      style: AppTextStyles.heading3.copyWith(
+                        color: AppColors.accent2,
                         fontWeight: FontWeight.w700,
                         fontSize: 20,
                       ),
@@ -545,10 +548,10 @@ class _CreativeProfileView extends StatelessWidget {
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.accent2.withOpacity(0.7),
                         fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
               ),
             ],
           ),
@@ -573,16 +576,16 @@ class _CreativeProfileView extends StatelessWidget {
               ),
             ),
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 // Progress Header with Level Info
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                  Text(
+                        Text(
                           'Level $currentLevel → ${currentLevel + 1}',
                           style: AppTextStyles.body1.copyWith(
                             fontWeight: FontWeight.w600,
@@ -594,10 +597,10 @@ class _CreativeProfileView extends StatelessWidget {
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.textSecondary,
                             fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -623,10 +626,10 @@ class _CreativeProfileView extends StatelessWidget {
                           color: AppColors.accent2,
                         ),
                       ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
 
                 // Modern Progress Bar with Gradient
                 Container(
@@ -668,7 +671,7 @@ class _CreativeProfileView extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-          Text(
+                        Text(
                           '$xpInCurrentLevel XP',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.textSecondary,
@@ -760,47 +763,47 @@ class _CreativeProfileView extends StatelessWidget {
         ),
         // Stats Cards
         Row(
-      children: [
-        Expanded(
+          children: [
+            Expanded(
               child: _buildModernStatCard(
                 icon: PhosphorIcons.crown(PhosphorIconsStyle.fill),
                 title: 'Level',
                 value: '${reward?.level ?? 1}',
                 subtitle: 'current',
-            color: AppColors.accent1,
+                color: AppColors.accent1,
                 gradient: [
                   AppColors.accent1,
                   AppColors.accent1.withOpacity(0.8),
                 ],
-          ),
-        ),
+              ),
+            ),
             const SizedBox(width: 16),
-        Expanded(
+            Expanded(
               child: _buildModernStatCard(
                 icon: PhosphorIcons.star(PhosphorIconsStyle.fill),
                 title: 'XP',
                 value: '${reward?.xp ?? 0}',
-            subtitle: 'earned',
-            color: AppColors.accent3,
+                subtitle: 'earned',
+                color: AppColors.accent3,
                 gradient: [
                   AppColors.accent3,
                   AppColors.accent3.withOpacity(0.8),
                 ],
-          ),
-        ),
+              ),
+            ),
             const SizedBox(width: 16),
-        Expanded(
+            Expanded(
               child: _buildModernStatCard(
                 icon: PhosphorIcons.graduationCap(PhosphorIconsStyle.fill),
-            title: 'Lessons',
+                title: 'Lessons',
                 value: '${((reward?.xp ?? 0) / 2).floor()}',
-            subtitle: 'completed',
-            color: AppColors.secondary,
+                subtitle: 'completed',
+                color: AppColors.secondary,
                 gradient: [
                   AppColors.secondary,
                   AppColors.secondary.withOpacity(0.8),
                 ],
-          ),
+              ),
             ),
           ],
         ),
@@ -847,30 +850,30 @@ class _CreativeProfileView extends StatelessWidget {
           // Icon with Gradient Background
           Container(
             padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: gradient,
               ),
               borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
+              boxShadow: [
+                BoxShadow(
                   color: color.withOpacity(0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+                ),
+              ],
+            ),
             child: Icon(icon, color: Colors.white, size: 24),
           ),
           const SizedBox(height: 16),
 
           // Value with Modern Typography
-                  Text(
+          Text(
             value,
             style: AppTextStyles.heading2.copyWith(
-                      color: AppColors.textPrimary,
+              color: AppColors.textPrimary,
               fontWeight: FontWeight.w800,
               fontSize: 24,
               letterSpacing: -0.5,
@@ -892,7 +895,7 @@ class _CreativeProfileView extends StatelessWidget {
           // Subtitle with Color Accent
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
+            decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -954,11 +957,11 @@ class _CreativeProfileView extends StatelessWidget {
             profile.email ?? 'Not provided',
           ),
           if (profile.birthDate != null)
-          _buildInfoRow(
+            _buildInfoRow(
               PhosphorIcons.cake(),
               'Birth Date',
               _formatBirthDate(profile.birthDate!),
-          ),
+            ),
           if (profile.nickname != null)
             _buildInfoRow(
               PhosphorIcons.smiley(),
@@ -974,7 +977,7 @@ class _CreativeProfileView extends StatelessWidget {
             PhosphorIcons.calendar(),
             'Member since',
             _formatDate(profile.createdAt),
-            ),
+          ),
         ],
       ),
     );
@@ -1070,48 +1073,40 @@ class _CreativeProfileView extends StatelessWidget {
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Icon(PhosphorIcons.signOut(), color: AppColors.error),
-              const SizedBox(width: 8),
-              const Text('Logout'),
-            ],
-          ),
-          content: const Text(
-            'Are you sure you want to logout from your learning adventure?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: AppColors.textSecondary),
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Logout',
+          style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          'Are you sure you want to logout?',
+          style: AppTextStyles.body1.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: AppTextStyles.body1.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.read<AuthBloc>().add(LogoutRequested());
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Logout',
-                style: TextStyle(color: Colors.white),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<AuthBloc>().add(LogoutRequested(context: context));
+            },
+            child: Text(
+              'Logout',
+              style: AppTextStyles.body1.copyWith(
+                color: AppColors.error,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 

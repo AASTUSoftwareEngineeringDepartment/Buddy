@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
+import 'package:flutter/material.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
@@ -30,8 +31,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    // TODO: Implement logout logic
-    emit(AuthUnauthenticated());
+    try {
+      // Clear any stored tokens or user data
+      // For now, we just emit unauthenticated state
+      // In the future, you might want to call a logout API endpoint
+      emit(AuthUnauthenticated());
+
+      // Clear the navigation stack and return to login
+      if (event.context != null) {
+        Navigator.of(
+          event.context!,
+        ).pushNamedAndRemoveUntil('/', (route) => false);
+      }
+    } catch (e) {
+      print('Logout error: $e');
+      // Even if there's an error, we still want to log the user out
+      emit(AuthUnauthenticated());
+    }
   }
 
   Future<void> _onAuthStatusChecked(
