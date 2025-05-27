@@ -41,4 +41,4 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // TODO: Implement auth status check logic
     emit(AuthUnauthenticated());
   }
-} 
+}

@@ -78,13 +78,15 @@ class _ChatPageState extends State<ChatPage>
             );
           },
         );
-        
+
         if (available) {
           setState(() => _speechEnabled = true);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Speech recognition is not available on this device'),
+              content: Text(
+                'Speech recognition is not available on this device',
+              ),
               backgroundColor: AppColors.error,
             ),
           );
@@ -92,7 +94,9 @@ class _ChatPageState extends State<ChatPage>
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Microphone permission is required for speech recognition'),
+            content: Text(
+              'Microphone permission is required for speech recognition',
+            ),
             backgroundColor: AppColors.error,
           ),
         );
