@@ -87,4 +87,60 @@ class QuestionRepository {
       throw Exception('An unexpected error occurred. Please try again.');
     }
   }
+
+  Future<Map<String, dynamic>> submitAnswer({
+    required String questionId,
+    required int selectedIndex,
+    String? accessToken,
+  }) async {
+    try {
+      print(
+        'Submitting answer for question: $questionId, selected index: $selectedIndex',
+      );
+      print('API URL: $_baseUrl/science/answer');
+
+      final options = accessToken != null
+          ? Options(
+              headers: {'Authorization': 'Bearer $accessToken'},
+              validateStatus: (status) => status! < 500,
+            )
+          : Options(validateStatus: (status) => status! < 500);
+
+      final response = await _dio.post(
+        '$_baseUrl/science/answer',
+        options: options,
+        data: {'question_id': questionId, 'selected_index': selectedIndex},
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized access. Please login again.');
+      } else {
+        throw Exception('Failed to submit answer: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw Exception('Unauthorized access. Please login again.');
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Connection timeout. Please try again.');
+      } else if (e.type == DioExceptionType.connectionError) {
+        throw Exception(
+          'No internet connection. Please check your connection and try again.',
+        );
+      } else {
+        throw Exception(
+          'An error occurred while submitting answer. Please try again.',
+        );
+      }
+    } catch (e, stackTrace) {
+      print('Unexpected error during answer submission: $e');
+      print('Stack trace: $stackTrace');
+      throw Exception('An unexpected error occurred. Please try again.');
+    }
+  }
 }

@@ -25,12 +25,14 @@ class GenerateQuestions extends QuestionEvent {
 class AnswerQuestion extends QuestionEvent {
   final String questionId;
   final int selectedOptionIndex;
+  final String? accessToken;
 
   const AnswerQuestion({
     required this.questionId,
     required this.selectedOptionIndex,
+    this.accessToken,
   });
 
   @override
-  List<Object?> get props => [questionId, selectedOptionIndex];
+  List<Object?> get props => [questionId, selectedOptionIndex, accessToken];
 }

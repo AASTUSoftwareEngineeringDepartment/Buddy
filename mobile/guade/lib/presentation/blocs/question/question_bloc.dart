@@ -38,7 +38,24 @@ class QuestionBloc extends Bloc<QuestionEvent, QuestionState> {
       final updatedAnswers = Map<String, int>.from(currentState.userAnswers);
       updatedAnswers[event.questionId] = event.selectedOptionIndex;
 
-      emit(currentState.copyWith(userAnswers: updatedAnswers));
+      try {
+        final response = await _questionRepository.submitAnswer(
+          questionId: event.questionId,
+          selectedIndex: event.selectedOptionIndex,
+          accessToken: event.accessToken,
+        );
+        emit(
+          currentState.copyWith(
+            userAnswers: updatedAnswers,
+            isCorrect: response['is_correct'] as bool?,
+            latestAnsweredQuestion:
+                response['question'] as Map<String, dynamic>?,
+            newAchievements: response['new_achievements'] as List<dynamic>?,
+          ),
+        );
+      } catch (e) {
+        emit(QuestionError(e.toString().replaceAll('Exception: ', '')));
+      }
     }
   }
 }

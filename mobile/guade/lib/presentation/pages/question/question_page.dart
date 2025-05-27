@@ -120,10 +120,112 @@ class QuestionPage extends StatelessWidget {
 class _QuestionView extends StatelessWidget {
   const _QuestionView();
 
+  void _showAchievementsDialog(
+    BuildContext context,
+    List<dynamic> achievements,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  PhosphorIcons.trophy(PhosphorIconsStyle.fill),
+                  size: 48,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'New Achievement${achievements.length > 1 ? 's' : ''}!',
+                style: AppTextStyles.heading2.copyWith(
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...achievements.map(
+                (achievement) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          PhosphorIcons.star(PhosphorIconsStyle.fill),
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            achievement['name'] ?? 'Achievement Unlocked!',
+                            style: AppTextStyles.body1.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.textLight,
+                  minimumSize: const Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Continue',
+                  style: AppTextStyles.body1.copyWith(
+                    color: AppColors.textLight,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<QuestionBloc, QuestionState>(
       builder: (context, state) {
+        if (state is QuestionLoaded &&
+            state.newAchievements != null &&
+            state.newAchievements!.isNotEmpty) {
+          // Show achievements dialog after the build is complete
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showAchievementsDialog(context, state.newAchievements!);
+          });
+        }
+
         if (state is QuestionInitial || state is QuestionLoading) {
           return Center(
             child: Column(
@@ -386,10 +488,19 @@ class _QuestionView extends StatelessWidget {
                             onPressed: isAnswered
                                 ? null
                                 : () {
+                                    final authState = context
+                                        .read<AuthBloc>()
+                                        .state;
+                                    String? accessToken;
+                                    if (authState is AuthAuthenticated) {
+                                      accessToken =
+                                          authState.response.accessToken;
+                                    }
                                     context.read<QuestionBloc>().add(
                                       AnswerQuestion(
                                         questionId: questions.first.questionId,
                                         selectedOptionIndex: optionIndex,
+                                        accessToken: accessToken,
                                       ),
                                     );
                                   },
