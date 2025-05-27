@@ -5,6 +5,11 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_state.dart';
+import '../../blocs/chat/chat_bloc.dart';
+import '../../blocs/chat/chat_event.dart';
+import '../../blocs/chat/chat_state.dart';
+import '../../../data/repositories/chat_repository.dart';
+import 'package:dio/dio.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -20,40 +25,6 @@ class _ChatPageState extends State<ChatPage>
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
   late final Animation<double> _slideAnimation;
-  bool _isLoading = false;
-  String? _error;
-
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-      text: "Hi! I'm your learning buddy. How can I help you today?",
-      isUser: false,
-      timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-    ),
-    ChatMessage(
-      text:
-          "I'm having trouble understanding the story about the brave knight.",
-      isUser: true,
-      timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
-    ),
-    ChatMessage(
-      text:
-          "I'd be happy to help! What specific part of the story is confusing you?",
-      isUser: false,
-      timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
-    ),
-    ChatMessage(
-      text:
-          "The part where the knight fights the dragon. It seems too difficult.",
-      isUser: true,
-      timestamp: DateTime.now().subtract(const Duration(minutes: 2)),
-    ),
-    ChatMessage(
-      text:
-          "I understand. Let's break it down together. The knight's bravery comes from facing his fears. Would you like me to read that part again?",
-      isUser: false,
-      timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
-    ),
-  ];
 
   @override
   void initState() {
@@ -89,36 +60,17 @@ class _ChatPageState extends State<ChatPage>
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-      _messages.add(
-        ChatMessage(
-          text: _messageController.text,
-          isUser: true,
-          timestamp: DateTime.now(),
-        ),
-      );
-      _messageController.clear();
-    });
+    final authState = context.read<AuthBloc>().state;
+    String? accessToken;
+    if (authState is AuthAuthenticated) {
+      accessToken = authState.response.accessToken;
+    }
 
-    // Simulate bot response after a short delay
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _messages.add(
-          ChatMessage(
-            text:
-                "I'm here to help you understand better. Would you like me to explain that part in a different way?",
-            isUser: false,
-            timestamp: DateTime.now(),
-          ),
-        );
-      });
-      _scrollToBottom();
-    });
+    context.read<ChatBloc>().add(
+      SendMessage(message: _messageController.text, accessToken: accessToken),
+    );
 
+    _messageController.clear();
     _scrollToBottom();
   }
 
@@ -204,28 +156,51 @@ class _ChatPageState extends State<ChatPage>
           child: Column(
             children: [
               Expanded(
-                child: AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    return Opacity(
-                      opacity: _fadeAnimation.value,
-                      child: Transform.translate(
-                        offset: Offset(0, _slideAnimation.value),
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
-                            final message = _messages[index];
-                            return _ChatBubble(message: message);
-                          },
+                child: BlocBuilder<ChatBloc, ChatState>(
+                  builder: (context, state) {
+                    if (state is ChatInitial) {
+                      return const Center(child: Text('Start a conversation!'));
+                    }
+
+                    if (state is ChatError) {
+                      return Center(
+                        child: Text(
+                          state.message,
+                          style: AppTextStyles.body1.copyWith(
+                            color: AppColors.error,
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    }
+
+                    if (state is ChatLoaded) {
+                      return AnimatedBuilder(
+                        animation: _animationController,
+                        builder: (context, child) {
+                          return Opacity(
+                            opacity: _fadeAnimation.value,
+                            child: Transform.translate(
+                              offset: Offset(0, _slideAnimation.value),
+                              child: ListView.builder(
+                                controller: _scrollController,
+                                padding: const EdgeInsets.all(16),
+                                itemCount: state.messages.length,
+                                itemBuilder: (context, index) {
+                                  final message = state.messages[index];
+                                  return _ChatBubble(message: message);
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }
+
+                    return const SizedBox.shrink();
                   },
                 ),
               ),
-              if (_isLoading)
+              if (context.watch<ChatBloc>().state is ChatLoading)
                 Container(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -257,28 +232,6 @@ class _ChatPageState extends State<ChatPage>
                             const SizedBox(width: 8),
                             _buildTypingIndicator(delay: 400),
                           ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (_error != null)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  color: AppColors.error.withOpacity(0.1),
-                  child: Row(
-                    children: [
-                      Icon(
-                        PhosphorIcons.warning(PhosphorIconsStyle.fill),
-                        color: AppColors.error,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _error!,
-                          style: AppTextStyles.body2.copyWith(
-                            color: AppColors.error,
-                          ),
                         ),
                       ),
                     ],
@@ -345,7 +298,10 @@ class _ChatPageState extends State<ChatPage>
                           ),
                           color: Colors.white,
                         ),
-                        onPressed: _isLoading ? null : _sendMessage,
+                        onPressed:
+                            context.watch<ChatBloc>().state is ChatLoading
+                            ? null
+                            : _sendMessage,
                       ),
                     ),
                   ],
@@ -473,16 +429,4 @@ class _ChatBubble extends StatelessWidget {
       return '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
     }
   }
-}
-
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final DateTime timestamp;
-
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    required this.timestamp,
-  });
 }

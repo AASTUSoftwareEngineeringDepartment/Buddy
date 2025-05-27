@@ -25,6 +25,8 @@ import 'presentation/pages/reward/reward_test_page.dart';
 import 'presentation/pages/vocabulary/vocabulary_page.dart';
 import 'presentation/layouts/main_layout.dart';
 import 'package:dio/dio.dart';
+import 'data/repositories/chat_repository.dart';
+import 'presentation/blocs/chat/chat_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -92,6 +94,7 @@ void main() async {
           BlocProvider(
             create: (context) => StoryBloc(getIt<StoryRepository>()),
           ),
+          BlocProvider(create: (context) => ChatBloc(ChatRepository(Dio()))),
         ],
         child: const MyApp(),
       ),
