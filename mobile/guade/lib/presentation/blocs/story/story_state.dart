@@ -1,10 +1,20 @@
+import 'package:equatable/equatable.dart';
 import '../../../data/models/story_model.dart';
 
-abstract class StoryState {}
+abstract class StoryState extends Equatable {
+  const StoryState();
 
-class StoryInitial extends StoryState {}
+  @override
+  List<Object?> get props => [];
+}
 
-class StoryLoading extends StoryState {}
+class StoryInitial extends StoryState {
+  const StoryInitial();
+}
+
+class StoryLoading extends StoryState {
+  const StoryLoading();
+}
 
 class StoryLoaded extends StoryState {
   final List<StoryModel> stories;
@@ -14,7 +24,7 @@ class StoryLoaded extends StoryState {
   final bool hasMore;
   final bool isLoadingMore;
 
-  StoryLoaded({
+  const StoryLoaded({
     required this.stories,
     required this.total,
     required this.currentSkip,
@@ -22,6 +32,16 @@ class StoryLoaded extends StoryState {
     required this.hasMore,
     this.isLoadingMore = false,
   });
+
+  @override
+  List<Object?> get props => [
+    stories,
+    total,
+    currentSkip,
+    limit,
+    hasMore,
+    isLoadingMore,
+  ];
 
   StoryLoaded copyWith({
     List<StoryModel>? stories,
@@ -45,5 +65,8 @@ class StoryLoaded extends StoryState {
 class StoryError extends StoryState {
   final String message;
 
-  StoryError(this.message);
+  const StoryError(this.message);
+
+  @override
+  List<Object?> get props => [message];
 }

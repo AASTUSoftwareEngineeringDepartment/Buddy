@@ -100,7 +100,11 @@ void main() async {
             create: (context) => VocabularyBloc(getIt<VocabularyRepository>()),
           ),
           BlocProvider(
-            create: (context) => StoryBloc(getIt<StoryRepository>()),
+            create: (context) {
+              final bloc = StoryBloc(getIt<StoryRepository>());
+              // Initialize with empty state
+              return bloc;
+            },
           ),
           BlocProvider(
             create: (context) =>

@@ -79,7 +79,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
 
   Future<void> _initializeTts() async {
     await _flutterTts.setLanguage('en-US');
-    await _flutterTts.setSpeechRate(0.8); // Adjusted for natural story reading
+    await _flutterTts.setSpeechRate(0.5); // Adjusted for natural story reading
     await _flutterTts.setPitch(1.0);
     await _flutterTts.setVolume(1.0);
   }

@@ -90,4 +90,61 @@ class StoryRepository {
       throw Exception('An unexpected error occurred. Please try again.');
     }
   }
+
+  Future<StoryModel> generateNewStory({required String accessToken}) async {
+    try {
+      print('Generating new story from: $_baseUrl/stories/generate');
+
+      final response = await _dio.post(
+        '$_baseUrl/stories/generate',
+        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        try {
+          final story = StoryModel.fromJson(response.data);
+          print('Successfully generated new story');
+          return story;
+        } catch (e) {
+          print('Error parsing story response: $e');
+          print('Response data that caused error: ${response.data}');
+          throw Exception('Invalid response format from server');
+        }
+      } else {
+        print(
+          'Failed to generate story with status code: ${response.statusCode}',
+        );
+        print('Error message: ${response.statusMessage}');
+        throw Exception('Failed to generate story: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      print('DioException during story generation:');
+      print('Type: ${e.type}');
+      print('Message: ${e.message}');
+      print('Response: ${e.response?.data}');
+      print('Error: ${e.error}');
+
+      if (e.response?.statusCode == 401) {
+        throw Exception('Unauthorized access. Please login again.');
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Connection timeout. Please try again.');
+      } else if (e.type == DioExceptionType.connectionError) {
+        throw Exception(
+          'No internet connection. Please check your connection and try again.',
+        );
+      } else {
+        throw Exception(
+          'An error occurred while generating story. Please try again.',
+        );
+      }
+    } catch (e, stackTrace) {
+      print('Unexpected error during story generation: $e');
+      print('Stack trace: $stackTrace');
+      throw Exception('An unexpected error occurred. Please try again.');
+    }
+  }
 }
