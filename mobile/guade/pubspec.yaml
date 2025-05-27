@@ -51,6 +51,7 @@ dependencies:
     phosphor_flutter: ^2.0.0
     # Text-to-speech
     flutter_tts: ^4.0.2
+    camera: ^0.10.0
 
 dev_dependencies:
     flutter_test:

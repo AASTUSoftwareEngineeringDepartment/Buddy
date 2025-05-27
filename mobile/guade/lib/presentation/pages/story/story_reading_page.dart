@@ -3,11 +3,16 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:camera/camera.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as path;
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/story_model.dart';
 import 'dart:math' as math;
 import 'vocabulary_quiz_page.dart';
+import 'dart:convert';
 
 class StoryReadingPage extends StatefulWidget {
   final StoryModel story;
@@ -39,6 +44,15 @@ class _StoryReadingPageState extends State<StoryReadingPage>
   List<Map<String, dynamic>> _vocabularyQuestions = [];
   bool _isStoryCompleted = false;
 
+  // Add new variables for emotion detection
+  CameraController? _cameraController;
+  List<CameraDescription>? cameras;
+  bool isCapturing = false;
+  String emotionResponse = "";
+  Timer? _emotionDetectionTimer;
+  bool _isShowingEmotionPopup = false;
+  int _noResponseCount = 0; // Counter for "No" responses
+
   @override
   void initState() {
     super.initState();
@@ -60,6 +74,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
     _initializeTts();
     _words = widget.story.storyBody.split(' ');
     _prepareVocabularyTest();
+    _initializeCamera();
   }
 
   Future<void> _initializeTts() async {
@@ -67,6 +82,247 @@ class _StoryReadingPageState extends State<StoryReadingPage>
     await _flutterTts.setSpeechRate(0.8); // Adjusted for natural story reading
     await _flutterTts.setPitch(1.0);
     await _flutterTts.setVolume(1.0);
+  }
+
+  Future<void> _initializeCamera() async {
+    cameras = await availableCameras();
+    if (cameras!.isEmpty) {
+      print("No cameras found");
+      return;
+    }
+    // Find front camera
+    final frontCamera = cameras!.firstWhere(
+      (camera) => camera.lensDirection == CameraLensDirection.front,
+      orElse: () => cameras!.first,
+    );
+
+    _cameraController = CameraController(frontCamera, ResolutionPreset.low);
+    await _cameraController!.initialize();
+    if (mounted) {
+      setState(() {});
+      // Start emotion detection after 5 seconds
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          _startEmotionDetection();
+        }
+      });
+    }
+  }
+
+  void _startEmotionDetection() {
+    // Start capturing immediately
+    _captureAndSendFrames();
+  }
+
+  Future<void> _handleEmotionResponse(String response) async {
+    try {
+      // Parse the response JSON
+      final Map<String, dynamic> emotionData = json.decode(response);
+      final String emotion =
+          emotionData['emotion']?.toString().toLowerCase() ?? '';
+
+      // Check for negative emotions and if we haven't shown the popup 3 times
+      if ((emotion == 'sad' ||
+              emotion == 'angry' ||
+              emotion == 'disgust' ||
+              emotion == 'fear') &&
+          _noResponseCount < 3) {
+        if (!mounted) return;
+
+        // Show popup only if not already showing
+        if (!_isShowingEmotionPopup) {
+          _isShowingEmotionPopup = true;
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              title: Row(
+                children: [
+                  Icon(
+                    PhosphorIcons.smiley(PhosphorIconsStyle.fill),
+                    color: AppColors.primary,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Are you bored?',
+                    style: AppTextStyles.heading2.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                'I notice you might not be enjoying this story. Would you like to try a different one?',
+                style: AppTextStyles.body1.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    setState(() {
+                      _isShowingEmotionPopup = false;
+                      _noResponseCount++; // Increment the counter
+                    });
+                  },
+                  child: Text(
+                    'No, continue',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    setState(() {
+                      _isShowingEmotionPopup = false;
+                    });
+                    // Navigate to story selection or home page
+                    Navigator.of(context).pop(); // Go back to story selection
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Yes, change story'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print("Error handling emotion response: $e");
+    }
+  }
+
+  Future<void> _captureAndSendFrames() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      print("Camera not initialized");
+      return;
+    }
+
+    if (isCapturing) {
+      print("Already capturing frames");
+      return;
+    }
+
+    setState(() {
+      isCapturing = true;
+    });
+
+    final List<XFile> capturedFrames = [];
+
+    try {
+      // Capture 10 frames at ~100ms intervals
+      for (int i = 0; i < 10; i++) {
+        try {
+          XFile file = await _cameraController!.takePicture();
+          capturedFrames.add(file);
+          await Future.delayed(const Duration(milliseconds: 100));
+        } catch (e) {
+          print("Error capturing frame $i: $e");
+          // Continue with next frame even if one fails
+          continue;
+        }
+      }
+
+      if (capturedFrames.isEmpty) {
+        print("No frames were captured successfully");
+        setState(() {
+          isCapturing = false;
+        });
+        return;
+      }
+
+      // Send captured images to backend
+      final response = await _sendFramesToServer(capturedFrames);
+
+      if (mounted) {
+        setState(() {
+          emotionResponse = response;
+        });
+
+        // Handle the emotion response
+        await _handleEmotionResponse(response);
+      }
+
+      // Wait for 5 seconds after sending to backend
+      await Future.delayed(const Duration(seconds: 5));
+    } catch (e) {
+      print("Error in capture and send process: $e");
+      // If there's an error, wait 5 seconds before trying again
+      await Future.delayed(const Duration(seconds: 5));
+    } finally {
+      if (mounted) {
+        setState(() {
+          isCapturing = false;
+        });
+        // Schedule next capture after resetting the flag
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            _captureAndSendFrames();
+          }
+        });
+      }
+    }
+  }
+
+  Future<String> _sendFramesToServer(List<XFile> frames) async {
+    final uri = Uri.parse('https://emotion-backend-sh1h.onrender.com/predict');
+
+    try {
+      var request = http.MultipartRequest('POST', uri);
+
+      // Add timeout to the request
+      request.headers['Connection'] = 'keep-alive';
+
+      for (var frame in frames) {
+        try {
+          var bytes = await frame.readAsBytes();
+          var multipartFile = http.MultipartFile.fromBytes(
+            'frames',
+            bytes,
+            filename: path.basename(frame.path),
+            contentType: MediaType('image', 'jpeg'),
+          );
+          request.files.add(multipartFile);
+        } catch (e) {
+          print("Error processing frame ${frame.path}: $e");
+          continue;
+        }
+      }
+
+      if (request.files.isEmpty) {
+        throw Exception('No valid frames to send');
+      }
+
+      var streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException('Request timed out');
+        },
+      );
+
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        return response.body;
+      } else {
+        throw Exception(
+          'Failed to get prediction. Status: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print("Error sending frames to server: $e");
+      rethrow;
+    }
   }
 
   void _startReading() {
@@ -252,6 +508,8 @@ class _StoryReadingPageState extends State<StoryReadingPage>
     _flutterTts.stop();
     _animationController.dispose();
     _scrollController.dispose();
+    _cameraController?.dispose();
+    _emotionDetectionTimer?.cancel();
     super.dispose();
   }
 
@@ -305,6 +563,36 @@ class _StoryReadingPageState extends State<StoryReadingPage>
         child: SafeArea(
           child: Stack(
             children: [
+              // Camera Preview
+              if (_cameraController != null &&
+                  _cameraController!.value.isInitialized)
+                Positioned(
+                  top: 16,
+                  left: 16,
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.3),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: CameraPreview(_cameraController!),
+                    ),
+                  ),
+                ),
+
               // Main Content
               AnimatedBuilder(
                 animation: _animationController,

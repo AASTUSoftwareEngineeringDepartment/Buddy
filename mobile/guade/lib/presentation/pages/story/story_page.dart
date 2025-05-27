@@ -1349,12 +1349,12 @@ class _StoryPageViewState extends State<_StoryPageView>
                                 ),
                               ],
                             ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              PhosphorIcons.arrowRight(PhosphorIconsStyle.bold),
-                              color: Colors.white,
-                              size: 16,
-                            ),
+                            // const SizedBox(width: 8),
+                            // Icon(
+                            //   PhosphorIcons.arrowRight(PhosphorIconsStyle.bold),
+                            //   color: Colors.white,
+                            //   size: 16,
+                            // ),
                           ],
                         ),
                       ),

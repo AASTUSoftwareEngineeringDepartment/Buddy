@@ -188,8 +188,9 @@ class _CreativeProfileView extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileHeader(profile, reward) {
-    return Container(
+ Widget _buildProfileHeader(profile, reward) {
+  return SingleChildScrollView(
+    child: Container(
       padding: const EdgeInsets.all(20),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -200,8 +201,8 @@ class _CreativeProfileView extends StatelessWidget {
             children: [
               // Outer glow effect
               Container(
-                width: 130,
-                height: 130,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
@@ -215,8 +216,8 @@ class _CreativeProfileView extends StatelessWidget {
               ),
               // Glassmorphism Level Ring
               Container(
-                width: 110,
-                height: 110,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
@@ -324,11 +325,11 @@ class _CreativeProfileView extends StatelessWidget {
                       const SizedBox(width: 3),
                       Text(
                         'LV ${reward?.level ?? 1}',
-                    style: AppTextStyles.caption.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                        style: AppTextStyles.caption.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                           fontSize: 11,
-                    ),
+                        ),
                       ),
                     ],
                   ),
@@ -377,9 +378,9 @@ class _CreativeProfileView extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-              '${profile.role.toUpperCase()} • Learning Explorer',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.secondary,
+                  '${profile.role.toUpperCase()} • Learning Explorer',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.secondary,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -438,17 +439,17 @@ class _CreativeProfileView extends StatelessWidget {
                         '${reward.xp} XP',
                         style: AppTextStyles.body1.copyWith(
                           color: AppColors.accent1,
-                fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
                       ),
-                      Text(
-                        'Experience Points',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.accent1.withOpacity(0.7),
-                          fontSize: 10,
-                        ),
-                      ),
+                      // Text(
+                      //   'Experience Points',
+                      //   style: AppTextStyles.caption.copyWith(
+                      //     color: AppColors.accent1.withOpacity(0.7),
+                      //     fontSize: 10,
+                      //   ),
+                      // ),
                     ],
                   ),
                 ],
@@ -457,8 +458,9 @@ class _CreativeProfileView extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildLearningJourney(reward) {
     // Calculate progress to next level (10 XP per level)
@@ -469,6 +471,7 @@ class _CreativeProfileView extends StatelessWidget {
     final progressPercent = (xpInCurrentLevel / xpPerLevel * 100).round();
 
     return Container(
+      margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(

@@ -39,4 +39,4 @@ class AppColors {
 
   // Border Color
   static const Color border = Color(0xFFE0E0E0);
-}
+} 

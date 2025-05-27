@@ -842,7 +842,7 @@ class _VocabularyCardState extends State<_VocabularyCard>
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
+                              horizontal: 4,
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(

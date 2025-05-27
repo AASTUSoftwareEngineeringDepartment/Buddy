@@ -31,6 +31,10 @@ final getIt = GetIt.instance;
 Future<void> initializeDependencies() async {
   // External
   final sharedPreferences = await SharedPreferences.getInstance();
+
+  // Clear all stored data to start fresh
+  await sharedPreferences.clear();
+
   getIt.registerSingleton(sharedPreferences);
 
   // Data sources

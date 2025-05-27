@@ -1,5 +1,5 @@
 class AppConfig {
-  static const String baseUrl = 'http://192.168.137.82:8000/api/v1';
+  static const String baseUrl = 'http://172.20.10.4:8000/api/v1';
   
   // Add other configuration constants here
   static const int connectionTimeout = 30000; // 30 seconds
