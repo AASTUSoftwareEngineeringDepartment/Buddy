@@ -199,7 +199,7 @@ class _StoryPageViewState extends State<_StoryPageView>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.9),
               shape: BoxShape.circle,
@@ -217,11 +217,20 @@ class _StoryPageViewState extends State<_StoryPageView>
           ),
           const SizedBox(height: 24),
           Text(
-            'Loading your stories...',
+            'Cooking up your stories...',
             style: AppTextStyles.body1.copyWith(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w500,
             ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Our AI chef is preparing your magical adventures! 🧙‍♂️✨',
+            style: AppTextStyles.body2.copyWith(
+              color: AppColors.textSecondary,
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -1409,7 +1418,7 @@ class _StoryPageViewState extends State<_StoryPageView>
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Creating your magical story...',
+                        'Cooking up a magical story...',
                         style: AppTextStyles.heading3.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w800,
@@ -1421,7 +1430,7 @@ class _StoryPageViewState extends State<_StoryPageView>
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
                         child: Text(
-                          'Our friendly AI is crafting a special adventure just for you! 🎨✨',
+                          'Our friendly AI chef is mixing ingredients of adventure, sprinkling some magic, and adding a pinch of fun! 🧙‍♂️✨',
                           style: AppTextStyles.body1.copyWith(
                             color: AppColors.textPrimary,
                             height: 1.5,
