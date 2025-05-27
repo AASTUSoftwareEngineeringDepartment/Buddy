@@ -1,15 +1,20 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:camera/camera.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as path;
+import 'package:dio/dio.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/models/story_model.dart';
+import '../../../data/repositories/story_repository.dart';
+import '../../blocs/auth/auth_bloc.dart';
+import '../../blocs/auth/auth_state.dart';
 import 'dart:math' as math;
 import 'vocabulary_quiz_page.dart';
 import 'dart:convert';
@@ -30,6 +35,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
   late Animation<double> _slideAnimation;
   final ScrollController _scrollController = ScrollController();
   final FlutterTts _flutterTts = FlutterTts();
+  late final StoryRepository _storyRepository;
   bool _isControlsVisible = true;
   double _lastScrollPosition = 0;
   double _fontSize = 32.0;
@@ -56,6 +62,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
   @override
   void initState() {
     super.initState();
+    _storyRepository = StoryRepository();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -132,69 +139,7 @@ class _StoryReadingPageState extends State<StoryReadingPage>
         // Show popup only if not already showing
         if (!_isShowingEmotionPopup) {
           _isShowingEmotionPopup = true;
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              title: Row(
-                children: [
-                  Icon(
-                    PhosphorIcons.smiley(PhosphorIconsStyle.fill),
-                    color: AppColors.primary,
-                    size: 32,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Are you bored?',
-                    style: AppTextStyles.heading2.copyWith(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-              content: Text(
-                'I notice you might not be enjoying this story. Would you like to try a different one?',
-                style: AppTextStyles.body1.copyWith(
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    setState(() {
-                      _isShowingEmotionPopup = false;
-                      _noResponseCount++; // Increment the counter
-                    });
-                  },
-                  child: Text(
-                    'No, continue',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    setState(() {
-                      _isShowingEmotionPopup = false;
-                    });
-                    // Navigate to story selection or home page
-                    Navigator.of(context).pop(); // Go back to story selection
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Yes, change story'),
-                ),
-              ],
-            ),
-          );
+          _showEmotionDialog(emotion);
         }
       }
     } catch (e) {
@@ -540,6 +485,148 @@ class _StoryReadingPageState extends State<StoryReadingPage>
     setState(() {
       _isDarkMode = !_isDarkMode;
     });
+  }
+
+  void _showEmotionDialog(String emotion) {
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                PhosphorIcons.smiley(PhosphorIconsStyle.fill),
+                color: AppColors.primary,
+                size: 32,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Are you bored?',
+                style: AppTextStyles.heading2.copyWith(
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'I notice you might not be enjoying this story. Would you like to try a different one?',
+                style: AppTextStyles.body1.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              if (isLoading) ...[
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Finding a new story for you...',
+                  style: AppTextStyles.body2.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            if (!isLoading)
+              TextButton(
+                onPressed: () {
+                  _noResponseCount++;
+                  _isShowingEmotionPopup = false;
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'No, continue',
+                  style: AppTextStyles.body1.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            if (!isLoading)
+              ElevatedButton(
+                onPressed: () async {
+                  setState(() => isLoading = true);
+                  try {
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is AuthAuthenticated) {
+                      final response = await _storyRepository
+                          .updateStoryEmotion(
+                            storyId: widget.story.storyId,
+                            emotion: emotion,
+                            accessToken: authState.response.accessToken,
+                          );
+
+                      if (!mounted) return;
+
+                      // Create new story from response
+                      final newStory = StoryModel(
+                        storyId: response['story_id'],
+                        title: response['title'],
+                        storyBody: response['story_body'],
+                        imageUrl: response['image_url'],
+                      );
+
+                      // Close the dialog and navigate to new story
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              StoryReadingPage(story: newStory),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (!mounted) return;
+                    setState(() => isLoading = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          e.toString().replaceAll('Exception: ', ''),
+                        ),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.textLight,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'Yes, new story',
+                  style: AppTextStyles.body1.copyWith(
+                    color: AppColors.textLight,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override

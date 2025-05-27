@@ -47,4 +47,8 @@ class PaginatedStoryResponse(BaseModel):
 class StoryUpdateRequest(BaseModel):
     parent_comment: str
     story_id: str
-    child_id: str 
+    child_id: str
+
+class StoryEmotionUpdateRequest(BaseModel):
+    emotion: str
+    story_id: str 

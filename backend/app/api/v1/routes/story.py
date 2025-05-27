@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from app.services.story_generation.story_service import StoryService
-from app.models.story.story import StoryResponse, VocabularyResponse, PaginatedStoryResponse, StoryUpdateRequest
+from app.models.story.story import StoryResponse, VocabularyResponse, PaginatedStoryResponse, StoryUpdateRequest, StoryEmotionUpdateRequest
 from app.api.v1.dependencies.auth import get_current_user, require_role
 from app.models.enums import UserRole
 from typing import List
@@ -352,4 +352,107 @@ async def delete_child_story(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to delete story: {str(e)}"
+        )
+
+@router.put("/story/update-emotion", response_model=StoryResponse)
+async def update_story_emotion(
+    request: StoryEmotionUpdateRequest,
+    current_user: tuple[str, UserRole] = Depends(get_current_user)
+):
+    """
+    Update a story based on the child's emotion.
+    If the emotion is negative (sad, fear, angry), the story will be regenerated to be more positive and uplifting.
+    Only accessible by children.
+
+    Parameters:
+    - **emotion**: The child's current emotion (happy, sad, fear, angry)
+    - **story_id**: The ID of the story to be updated
+
+    Returns:
+    - **story_id**: The ID of the updated story
+    - **title**: The title of the updated story
+    - **story_body**: The content of the updated story
+    - **image_url**: Optional URL to the story's image
+
+    Raises:
+    - **404**: Story not found
+    - **403**: Not authorized to update this story
+    - **500**: Failed to update story
+    """
+    try:
+        child_id, user_role = current_user
+        if user_role != UserRole.CHILD:
+            raise HTTPException(
+                status_code=403,
+                detail="Only children can update their stories"
+            )
+
+        story_service = StoryService()
+        
+        # Get the original story
+        story = await story_service.story_repository.get_story(request.story_id)
+        if not story:
+            raise HTTPException(
+                status_code=404,
+                detail="Story not found"
+            )
+            
+        # Verify the story belongs to the child
+        if story.child_id != child_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Not authorized to update this story"
+            )
+            
+        # Generate emotion-based prompt
+        emotion_prompt = ""
+        if request.emotion.lower() in ["sad", "fear", "angry"]:
+            emotion_prompt = f"""The child is feeling {request.emotion}. Please regenerate this story to be more positive and uplifting, 
+            focusing on themes of hope, courage, and happiness. Make sure to:
+            - Include positive outcomes and solutions
+            - Add elements of joy and comfort
+            - Maintain the educational value
+            - Keep the story engaging and fun
+            - Use encouraging and supportive language"""
+        else:
+            emotion_prompt = f"""The child is feeling {request.emotion}. Please enhance this story to maintain and amplify these positive emotions, 
+            focusing on themes of joy, friendship, and adventure. Make sure to:
+            - Keep the positive and happy elements
+            - Add more fun and engaging moments
+            - Maintain the educational value
+            - Keep the story uplifting
+            - Use cheerful and enthusiastic language"""
+            
+        # Generate new story
+        new_story = await story_service.generate_personalized_story(
+            child_id,
+            parent_comment=emotion_prompt,
+            original_story=story
+        )
+        
+        # Update the story in the database
+        updated_story = await story_service.story_repository.update_story(
+            request.story_id,
+            new_story
+        )
+        
+        if not updated_story:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to update story"
+            )
+            
+        return StoryResponse(
+            story_id=updated_story.story_id,
+            title=updated_story.title,
+            story_body=updated_story.content,
+            image_url=updated_story.image_url
+        )
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update story: {str(e)}"
         ) 
