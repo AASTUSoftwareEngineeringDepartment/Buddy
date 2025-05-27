@@ -206,71 +206,194 @@ class _AchievementsView extends StatelessWidget {
 
   Widget _buildAchievementsContent(AchievementLoaded state) {
     final response = state.response;
+    final totalAchievements = 8; // Fixed total
+    final earnedAchievements = 1; // Fixed earned count
+    final percentage = (earnedAchievements / totalAchievements) * 100;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Progress Section
+          // Progress Section with new design
           Container(
-            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary.withOpacity(0.1),
+                  AppColors.primary.withOpacity(0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primary.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Overall Progress',
-                  style: AppTextStyles.heading3.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        PhosphorIcons.trophy(PhosphorIconsStyle.fill),
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'Achievement Progress',
+                        style: AppTextStyles.heading2.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Stack(
+                  children: [
+                    Container(
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: percentage / 100),
+                      duration: const Duration(milliseconds: 1500),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return Container(
+                          height: 12,
+                          width:
+                              MediaQuery.of(context).size.width * 0.7 * value,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.primary,
+                                AppColors.primary.withOpacity(0.8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
-                LinearProgressIndicator(
-                  value: response.completionPercentage / 100,
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$earnedAchievements',
+                            style: AppTextStyles.heading2.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Earned',
+                            style: AppTextStyles.body2.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '$totalAchievements',
+                            style: AppTextStyles.heading2.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Total',
+                            style: AppTextStyles.body2.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${response.totalAchievements} of ${response.totalPossible} achievements earned',
-                  style: AppTextStyles.body2.copyWith(
-                    color: AppColors.textSecondary,
+                  '${percentage.toStringAsFixed(1)}% Complete',
+                  style: AppTextStyles.body1.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
 
-          // Categories Section
+          // Categories Section with new design
           ...response.categories.entries.map((entry) {
             if (entry.value.isEmpty) return const SizedBox.shrink();
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _getCategoryTitle(entry.key),
-                  style: AppTextStyles.heading3.copyWith(
-                    color: AppColors.textPrimary,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _getCategoryTitle(entry.key),
+                        style: AppTextStyles.heading3.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
-                ...entry.value.map(
-                  (achievement) => _buildAchievementCard(achievement),
+                ...entry.value.asMap().entries.map(
+                  (achievementEntry) => _buildAchievementCard(
+                    achievementEntry.value,
+                    achievementEntry.key,
+                  ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
               ],
             );
           }).toList(),
@@ -279,99 +402,109 @@ class _AchievementsView extends StatelessWidget {
     );
   }
 
-  Widget _buildAchievementCard(AchievementModel achievement) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+  Widget _buildAchievementCard(AchievementModel achievement, int index) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 600 + (index * 100)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
-            child: Icon(
-              _getAchievementIcon(achievement.type),
-              color: AppColors.primary,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  achievement.title,
-                  style: AppTextStyles.body1.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  achievement.description,
-                  style: AppTextStyles.body2.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (achievement.streakCount != null) ...[
-                      Icon(
-                        PhosphorIcons.fire(),
-                        size: 16,
-                        color: AppColors.primary,
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              // Add achievement details view here
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withOpacity(0.1),
+                          AppColors.primary.withOpacity(0.2),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${achievement.streakCount} streak',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      _getAchievementIcon(achievement.type),
+                      color: AppColors.primary,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          achievement.title,
+                          style: AppTextStyles.body1.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    if (achievement.totalCorrect != null) ...[
-                      Icon(
-                        PhosphorIcons.checkCircle(),
-                        size: 16,
-                        color: AppColors.success,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${achievement.totalCorrect} correct',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.success,
+                        const SizedBox(height: 6),
+                        Text(
+                          achievement.description,
+                          style: AppTextStyles.body2.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Earned on ${_formatDate(achievement.earnedAt)}',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary,
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(
+                              PhosphorIcons.calendar(),
+                              size: 16,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatDate(achievement.earnedAt),
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  Icon(
+                    PhosphorIcons.caretRight(),
+                    color: AppColors.textSecondary.withOpacity(0.5),
+                    size: 20,
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -401,6 +534,8 @@ class _AchievementsView extends StatelessWidget {
         return PhosphorIcons.fire(PhosphorIconsStyle.fill);
       case 'perfect_streak_advanced':
         return PhosphorIcons.fire(PhosphorIconsStyle.fill);
+      case 'science_explorer':
+        return PhosphorIcons.rocket();
       default:
         return PhosphorIcons.trophy();
     }
