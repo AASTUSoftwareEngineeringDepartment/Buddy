@@ -10,6 +10,7 @@ import 'data/repositories/reward_repository.dart';
 import 'data/repositories/vocabulary_repository.dart';
 import 'data/repositories/story_repository.dart';
 import 'data/repositories/question_repository.dart';
+import 'data/repositories/achievement_repository.dart';
 import 'domain/repositories/counter_repository.dart';
 import 'domain/usecases/get_counter.dart';
 import 'domain/usecases/increment_counter.dart';
@@ -18,6 +19,7 @@ import 'presentation/blocs/auth/auth_state.dart';
 import 'presentation/blocs/reward/reward_bloc.dart';
 import 'presentation/blocs/vocabulary/vocabulary_bloc.dart';
 import 'presentation/blocs/story/story_bloc.dart';
+import 'presentation/blocs/achievement/achievement_bloc.dart';
 import 'presentation/pages/auth/login_page.dart';
 import 'presentation/pages/counter_page.dart';
 import 'presentation/pages/onboarding/onboarding_page.dart';
@@ -57,6 +59,9 @@ Future<void> initializeDependencies() async {
   getIt.registerLazySingleton<QuestionRepository>(
     () => QuestionRepository(Dio()),
   );
+  getIt.registerLazySingleton<AchievementRepository>(
+    () => AchievementRepository(Dio()),
+  );
 
   // Use cases
   getIt.registerLazySingleton(() => GetCounter(getIt()));
@@ -81,6 +86,9 @@ void main() async {
         RepositoryProvider<StoryRepository>(
           create: (_) => getIt<StoryRepository>(),
         ),
+        RepositoryProvider<AchievementRepository>(
+          create: (_) => getIt<AchievementRepository>(),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -93,6 +101,10 @@ void main() async {
           ),
           BlocProvider(
             create: (context) => StoryBloc(getIt<StoryRepository>()),
+          ),
+          BlocProvider(
+            create: (context) =>
+                AchievementBloc(getIt<AchievementRepository>()),
           ),
           BlocProvider(create: (context) => ChatBloc(ChatRepository(Dio()))),
         ],

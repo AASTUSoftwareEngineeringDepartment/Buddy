@@ -206,19 +206,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Forgot Password
-                      TextButton(
-                        onPressed: () {
-                          // TODO: Navigate to forgot password page
-                        },
-                        child: Text(
-                          'Forgot Password?',
-                          style: AppTextStyles.body2.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
