@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../blocs/auth/auth_bloc.dart';
@@ -10,6 +12,7 @@ import '../../blocs/chat/chat_event.dart';
 import '../../blocs/chat/chat_state.dart';
 import '../../../data/repositories/chat_repository.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -25,11 +28,132 @@ class _ChatPageState extends State<ChatPage>
   late final AnimationController _animationController;
   late final Animation<double> _fadeAnimation;
   late final Animation<double> _slideAnimation;
+  final FlutterTts _flutterTts = FlutterTts();
+  final SpeechToText _speech = SpeechToText();
+  bool _isListening = false;
+  bool _speechEnabled = false;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
+    _initializeTts();
+    _initializeSpeech();
+  }
+
+  Future<void> _initializeTts() async {
+    await _flutterTts.setLanguage('en-US');
+    await _flutterTts.setSpeechRate(0.5); // Slower rate for better clarity
+    await _flutterTts.setPitch(1.0);
+    await _flutterTts.setVolume(1.0);
+  }
+
+  Future<void> _speakMessage(String text) async {
+    await _flutterTts.speak(text);
+  }
+
+  Future<void> _initializeSpeech() async {
+    try {
+      // Request microphone permission
+      final status = await Permission.microphone.request();
+      if (status.isGranted) {
+        bool available = await _speech.initialize(
+          onStatus: (status) {
+            print('Speech recognition status: $status');
+            if (status == 'done') {
+              setState(() => _isListening = false);
+            }
+          },
+          onError: (error) {
+            print('Speech recognition error: $error');
+            setState(() {
+              _isListening = false;
+              _speechEnabled = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Speech recognition error: $error'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          },
+        );
+        
+        if (available) {
+          setState(() => _speechEnabled = true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Speech recognition is not available on this device'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Microphone permission is required for speech recognition'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error initializing speech: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to initialize speech recognition: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _startListening() async {
+    if (!_speechEnabled) {
+      await _initializeSpeech();
+      if (!_speechEnabled) {
+        return;
+      }
+    }
+
+    try {
+      if (!_isListening) {
+        setState(() => _isListening = true);
+        await _speech.listen(
+          onResult: (result) {
+            print('Speech recognition result: ${result.recognizedWords}');
+            setState(() {
+              _messageController.text = result.recognizedWords;
+              if (result.finalResult) {
+                _isListening = false;
+                if (_messageController.text.isNotEmpty) {
+                  _sendMessage();
+                }
+              }
+            });
+          },
+          listenFor: const Duration(seconds: 30),
+          pauseFor: const Duration(seconds: 3),
+          partialResults: true,
+          localeId: 'en_US',
+          onSoundLevelChange: (level) {
+            print('Sound level: $level');
+          },
+        );
+      } else {
+        setState(() => _isListening = false);
+        await _speech.stop();
+      }
+    } catch (e) {
+      print('Error during speech recognition: $e');
+      setState(() => _isListening = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error during speech recognition: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   void _initializeAnimations() {
@@ -54,6 +178,7 @@ class _ChatPageState extends State<ChatPage>
     _messageController.dispose();
     _scrollController.dispose();
     _animationController.dispose();
+    _flutterTts.stop();
     super.dispose();
   }
 
@@ -91,15 +216,33 @@ class _ChatPageState extends State<ChatPage>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+            ),
+          ),
+        ),
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(PhosphorIcons.arrowLeft(), color: Colors.white),
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Row(
           children: [
             Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
               child: Image.asset(
@@ -113,14 +256,12 @@ class _ChatPageState extends State<ChatPage>
               children: [
                 Text(
                   'Learning Buddy',
-                  style: AppTextStyles.heading3.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
+                  style: AppTextStyles.heading3.copyWith(color: Colors.white),
                 ),
                 Text(
                   'Online',
                   style: AppTextStyles.caption.copyWith(
-                    color: AppColors.success,
+                    color: Colors.white.withOpacity(0.8),
                   ),
                 ),
               ],
@@ -129,14 +270,22 @@ class _ChatPageState extends State<ChatPage>
         ),
         actions: [
           IconButton(
-            icon: Icon(
-              PhosphorIcons.dotsThreeOutline(),
-              color: AppColors.textSecondary,
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                PhosphorIcons.dotsThreeOutline(),
+                color: Colors.white,
+              ),
             ),
             onPressed: () {
               // Show options menu
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
@@ -159,44 +308,135 @@ class _ChatPageState extends State<ChatPage>
                 child: BlocBuilder<ChatBloc, ChatState>(
                   builder: (context, state) {
                     if (state is ChatInitial) {
-                      return const Center(child: Text('Start a conversation!'));
-                    }
-
-                    if (state is ChatError) {
                       return Center(
-                        child: Text(
-                          state.message,
-                          style: AppTextStyles.body1.copyWith(
-                            color: AppColors.error,
-                          ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withOpacity(0.2),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Image.asset(
+                                'assets/images/puppet.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'Hi there! 👋',
+                              style: AppTextStyles.heading2.copyWith(
+                                color: AppColors.primary,
+                                fontSize: 28,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'I\'m your learning buddy!\nLet\'s chat and learn together!',
+                              style: AppTextStyles.body1.copyWith(
+                                color: AppColors.textSecondary,
+                                height: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 32),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    PhosphorIcons.sparkle(
+                                      PhosphorIconsStyle.fill,
+                                    ),
+                                    color: AppColors.primary,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Ask me anything!',
+                                    style: AppTextStyles.body1.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }
 
-                    if (state is ChatLoaded) {
-                      return AnimatedBuilder(
-                        animation: _animationController,
-                        builder: (context, child) {
-                          return Opacity(
-                            opacity: _fadeAnimation.value,
-                            child: Transform.translate(
-                              offset: Offset(0, _slideAnimation.value),
-                              child: ListView.builder(
-                                controller: _scrollController,
-                                padding: const EdgeInsets.all(16),
-                                itemCount: state.messages.length,
-                                itemBuilder: (context, index) {
-                                  final message = state.messages[index];
-                                  return _ChatBubble(message: message);
-                                },
+                    if (state is ChatError) {
+                      return Column(
+                        children: [
+                          Expanded(
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: state.messages.length,
+                              itemBuilder: (context, index) {
+                                final message = state.messages[index];
+                                return _ChatBubble(message: message);
+                              },
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              state.message,
+                              style: AppTextStyles.body1.copyWith(
+                                color: AppColors.error,
                               ),
                             ),
-                          );
-                        },
+                          ),
+                        ],
                       );
                     }
 
-                    return const SizedBox.shrink();
+                    final messages = state is ChatLoaded
+                        ? state.messages
+                        : state is ChatLoading
+                        ? state.messages
+                        : <ChatMessage>[];
+
+                    return AnimatedBuilder(
+                      animation: _animationController,
+                      builder: (context, child) {
+                        return Opacity(
+                          opacity: _fadeAnimation.value,
+                          child: Transform.translate(
+                            offset: Offset(0, _slideAnimation.value),
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: messages.length,
+                              itemBuilder: (context, index) {
+                                final message = messages[index];
+                                return _ChatBubble(message: message);
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    );
                   },
                 ),
               ),
@@ -264,17 +504,50 @@ class _ChatPageState extends State<ChatPage>
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(color: AppColors.border),
                         ),
-                        child: TextField(
-                          controller: _messageController,
-                          decoration: InputDecoration(
-                            hintText: 'Type your message...',
-                            hintStyle: AppTextStyles.body2.copyWith(
-                              color: AppColors.textSecondary,
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: _isListening
+                                      ? AppColors.primary.withOpacity(0.2)
+                                      : AppColors.primary.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  _isListening
+                                      ? PhosphorIcons.microphoneSlash(
+                                          PhosphorIconsStyle.fill,
+                                        )
+                                      : PhosphorIcons.microphone(
+                                          PhosphorIconsStyle.fill,
+                                        ),
+                                  color: _isListening
+                                      ? AppColors.primary
+                                      : AppColors.primary.withOpacity(0.7),
+                                ),
+                              ),
+                              onPressed: _startListening,
                             ),
-                            border: InputBorder.none,
-                          ),
-                          maxLines: null,
-                          textCapitalization: TextCapitalization.sentences,
+                            Expanded(
+                              child: TextField(
+                                controller: _messageController,
+                                decoration: InputDecoration(
+                                  hintText: _isListening
+                                      ? 'Listening...'
+                                      : 'Type your message...',
+                                  hintStyle: AppTextStyles.body2.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  border: InputBorder.none,
+                                ),
+                                maxLines: null,
+                                textCapitalization:
+                                    TextCapitalization.sentences,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -398,13 +671,46 @@ class _ChatBubble extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    _formatTime(message.timestamp),
-                    style: AppTextStyles.caption.copyWith(
-                      color: message.isUser
-                          ? Colors.white.withOpacity(0.7)
-                          : AppColors.textSecondary,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatTime(message.timestamp),
+                        style: AppTextStyles.caption.copyWith(
+                          color: message.isUser
+                              ? Colors.white.withOpacity(0.7)
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          final chatPageState = context
+                              .findAncestorStateOfType<_ChatPageState>();
+                          if (chatPageState != null) {
+                            chatPageState._speakMessage(message.text);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color:
+                                (message.isUser
+                                        ? Colors.white
+                                        : AppColors.primary)
+                                    .withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            PhosphorIcons.microphone(PhosphorIconsStyle.fill),
+                            size: 16,
+                            color: message.isUser
+                                ? Colors.white
+                                : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
